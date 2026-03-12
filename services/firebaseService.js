@@ -1,16 +1,29 @@
 const admin = require('firebase-admin');
-const serviceAccount = require('../firebase-admin-SDK.json');
 
-// Initialize Firebase Admin if it hasn't been initialized yet
-if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        // Standard Firebase Realtime Database URL format based on project ID
-        databaseURL: `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`
-    });
+let serviceAccount = null;
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    console.warn('Firebase service not loaded: FIREBASE_SERVICE_ACCOUNT is not set');
+} else {
+    try {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } catch (error) {
+        console.warn('Firebase service not loaded: FIREBASE_SERVICE_ACCOUNT is invalid JSON');
+    }
 }
 
-const db = admin.database();
+if (!serviceAccount) {
+    module.exports = null;
+} else {
+    // Initialize Firebase Admin if it hasn't been initialized yet
+    if (!admin.apps.length) {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            // Standard Firebase Realtime Database URL format based on project ID
+            databaseURL: `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`
+        });
+    }
+
+    const db = admin.database();
 
 /**
  * Send a real-time notification to a specific user
@@ -50,9 +63,10 @@ async function updateApplicantCount(jobId, count) {
     }
 }
 
-module.exports = {
-    admin,
-    db,
-    sendNotification,
-    updateApplicantCount
-};
+    module.exports = {
+        admin,
+        db,
+        sendNotification,
+        updateApplicantCount
+    };
+}
