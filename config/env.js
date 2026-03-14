@@ -20,35 +20,6 @@ function buildMongoUriFromPieces() {
   return `mongodb+srv://${encodedUser}:${encodedPass}@${host}${dbSegment}${optionsSegment}`;
 }
 
-function parseFirebaseServiceAccount(raw, warnings, firebaseErrors) {
-  if (!raw) {
-    warnings.push(
-      "FIREBASE_SERVICE_ACCOUNT is not set. Firebase Admin features will be disabled."
-    );
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed?.private_key && parsed.private_key.includes("\\n")) {
-      parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
-    }
-
-    if (!parsed?.project_id || !parsed?.client_email || !parsed?.private_key) {
-      warnings.push(
-        "FIREBASE_SERVICE_ACCOUNT is missing expected fields (project_id, client_email, private_key)."
-      );
-    }
-
-    return parsed;
-  } catch (error) {
-    firebaseErrors.push(
-      "FIREBASE_SERVICE_ACCOUNT must be valid JSON. Paste the full service account JSON string."
-    );
-    return null;
-  }
-}
-
 export function loadEnv() {
   const errors = [];
   const warnings = [];
@@ -75,19 +46,10 @@ export function loadEnv() {
     warnings.push("DB_USER/DB_PASS set but DB_HOST is missing.");
   }
 
-  const FIREBASE_SERVICE_ACCOUNT_RAW = process.env.FIREBASE_SERVICE_ACCOUNT;
-  const FIREBASE_SERVICE_ACCOUNT = parseFirebaseServiceAccount(
-    FIREBASE_SERVICE_ACCOUNT_RAW,
-    warnings,
-    firebaseErrors
-  );
-
   return {
     env: {
       MONGODB_URI,
       MONGO_DB_NAME: process.env.MONGO_DB_NAME || process.env.DB_NAME || "skillmatchai",
-      FIREBASE_SERVICE_ACCOUNT,
-      FIREBASE_SERVICE_ACCOUNT_RAW,
       NODE_ENV: process.env.NODE_ENV || "development",
       CORS_ORIGIN: process.env.CORS_ORIGIN || "",
       PORT: process.env.PORT || "5000",

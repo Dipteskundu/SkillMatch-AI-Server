@@ -30,6 +30,6 @@ if (!process.env.VERCEL) {
         console.error("Environment errors:", errors);
       }
     });
-} else {
-  console.warn("VERCEL detected. Use api/index.js as the serverless entry.");
 }
+
+export default app;
