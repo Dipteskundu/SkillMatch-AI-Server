@@ -1,5 +1,13 @@
-import admin from "firebase-admin";
+import { createRequire } from "module";
 import { loadEnv } from "../config/env.js";
+
+const require = createRequire(import.meta.url);
+let admin = null;
+try {
+  admin = require("firebase-admin");
+} catch (error) {
+  admin = null;
+}
 
 const globalCache = globalThis.__firebaseService || {
   service: null,
@@ -15,6 +23,13 @@ function buildDatabaseUrl(serviceAccount) {
 
 export function getFirebaseService() {
   if (globalCache.service) return globalCache.service;
+
+  if (!admin) {
+    console.warn(
+      "Firebase Admin not installed. Firebase features are disabled. Add firebase-admin to enable."
+    );
+    return null;
+  }
 
   const { env, firebaseErrors } = loadEnv();
   const hasFirebaseError = firebaseErrors.some((e) =>
