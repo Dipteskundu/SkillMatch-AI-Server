@@ -3,12 +3,16 @@
 
 import "dotenv/config";
 
+function cleanEnvValue(value) {
+  return typeof value === "string" ? value.trim() : value;
+}
+
 function buildMongoUriFromPieces() {
-  const user = process.env.DB_USER;
-  const pass = process.env.DB_PASS;
-  const host = process.env.DB_HOST;
-  const dbName = process.env.DB_NAME;
-  const options = process.env.DB_OPTIONS;
+  const user = cleanEnvValue(process.env.DB_USER);
+  const pass = cleanEnvValue(process.env.DB_PASS);
+  const host = cleanEnvValue(process.env.DB_HOST);
+  const dbName = cleanEnvValue(process.env.DB_NAME);
+  const options = cleanEnvValue(process.env.DB_OPTIONS);
 
   if (!user || !pass || !host) return null;
 
@@ -26,13 +30,13 @@ export function loadEnv() {
   const firebaseErrors = [];
 
   const MONGODB_URI =
-    process.env.MONGODB_URI ||
-    process.env.MONGO_URI ||
+    cleanEnvValue(process.env.MONGODB_URI) ||
+    cleanEnvValue(process.env.MONGO_URI) ||
     buildMongoUriFromPieces();
 
   if (!MONGODB_URI) {
     errors.push(
-      "Missing MongoDB connection string. Set MONGODB_URI (preferred) or MONGO_URI, or DB_USER/DB_PASS/DB_HOST."
+      "Missing MongoDB connection string. Set MONGODB_URI (preferred) or MONGO_URI, or DB_USER/DB_PASS/DB_HOST.",
     );
   }
 
@@ -49,15 +53,18 @@ export function loadEnv() {
   return {
     env: {
       MONGODB_URI,
-      MONGO_DB_NAME: process.env.MONGO_DB_NAME || process.env.DB_NAME || "skillmatchai",
-      NODE_ENV: process.env.NODE_ENV || "development",
-      CORS_ORIGIN: process.env.CORS_ORIGIN || "",
-      PORT: process.env.PORT || "5000",
-      GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
+      MONGO_DB_NAME:
+        cleanEnvValue(process.env.MONGO_DB_NAME) ||
+        cleanEnvValue(process.env.DB_NAME) ||
+        "skillmatchai",
+      NODE_ENV: cleanEnvValue(process.env.NODE_ENV) || "development",
+      CORS_ORIGIN: cleanEnvValue(process.env.CORS_ORIGIN) || "",
+      PORT: cleanEnvValue(process.env.PORT) || "5000",
+      GEMINI_API_KEY: cleanEnvValue(process.env.GEMINI_API_KEY) || "",
     },
     errors,
     warnings,
     firebaseErrors,
-    isProd: process.env.NODE_ENV === "production",
+    isProd: cleanEnvValue(process.env.NODE_ENV) === "production",
   };
 }

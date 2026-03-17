@@ -11,8 +11,70 @@ const MODEL_PRIORITY = [
   "gemini-2.5-flash",
   "gemini-flash-latest",
   "gemini-2.0-flash",
-  "gemini-2.0-flash-001"
+  "gemini-2.0-flash-001",
 ];
+
+const TECH_KEYWORDS = [
+  "javascript",
+  "typescript",
+  "react",
+  "next.js",
+  "node.js",
+  "express",
+  "mongodb",
+  "mysql",
+  "postgresql",
+  "python",
+  "java",
+  "c++",
+  "c#",
+  "firebase",
+  "docker",
+  "kubernetes",
+  "aws",
+  "azure",
+  "tailwind",
+  "html",
+  "css",
+  "git",
+];
+
+function fallbackExtractFromText(resumeText = "") {
+  const lowerText = String(resumeText).toLowerCase();
+
+  const technologies = TECH_KEYWORDS.filter((keyword) =>
+    lowerText.includes(keyword.toLowerCase()),
+  ).map((keyword) => keyword.replace(/\b\w/g, (char) => char.toUpperCase()));
+
+  const roleCandidates = [
+    "software engineer",
+    "frontend developer",
+    "backend developer",
+    "full stack developer",
+    "data analyst",
+    "data scientist",
+    "devops engineer",
+    "qa engineer",
+    "product manager",
+  ];
+
+  const role_titles = roleCandidates
+    .filter((role) => lowerText.includes(role))
+    .map((role) => role.replace(/\b\w/g, (char) => char.toUpperCase()));
+
+  let experience_years = 0;
+  const yearsMatch = lowerText.match(/(\d{1,2})\s*\+?\s*(years|yrs)/i);
+  if (yearsMatch) {
+    experience_years = Number(yearsMatch[1]) || 0;
+  }
+
+  return {
+    skills: technologies,
+    experience_years,
+    technologies,
+    role_titles,
+  };
+}
 
 function getModel(modelName) {
   if (!genAI) return null;
@@ -49,9 +111,11 @@ async function generateWithFallback(prompt, retryCount = 0) {
       const model = getModel(modelName);
       const result = await model.generateContent(prompt);
       const text = result.response.text();
-      
+
       if (text && text.trim()) {
-        console.log(`✓ Successfully used model: ${modelName} for skill extraction`);
+        console.log(
+          `✓ Successfully used model: ${modelName} for skill extraction`,
+        );
         return { text: text.trim(), modelUsed: modelName };
       }
     } catch (err) {
@@ -72,7 +136,12 @@ async function generateWithFallback(prompt, retryCount = 0) {
     return generateWithFallback(prompt, retryCount + 1);
   }
 
-  throw lastError || new Error("All Gemini models failed. Try updating GEMINI_API_KEY or check your internet connection.");
+  throw (
+    lastError ||
+    new Error(
+      "All Gemini models failed. Try updating GEMINI_API_KEY or check your internet connection.",
+    )
+  );
 }
 
 /**
@@ -82,8 +151,8 @@ async function generateWithFallback(prompt, retryCount = 0) {
  * @returns {Promise<Object>} The extracted skills profile
  */
 async function extractSkillsFromResume(resumeText) {
-  if (!resumeText || resumeText.trim() === '') {
-    throw new Error('No resume text provided for extraction');
+  if (!resumeText || resumeText.trim() === "") {
+    throw new Error("No resume text provided for extraction");
   }
 
   const prompt = `You are an expert technical recruiter and resume parser.
@@ -104,7 +173,17 @@ ${resumeText.substring(0, 15000)} /* Truncate to avoid exceeding token limits if
 """
 `;
 
-  const { text } = await generateWithFallback(prompt);
+  let text = "";
+  try {
+    const result = await generateWithFallback(prompt);
+    text = result.text;
+  } catch (error) {
+    console.warn(
+      "AI extraction unavailable, using fallback extraction:",
+      error?.message || error,
+    );
+    return fallbackExtractFromText(resumeText);
+  }
 
   // Parse JSON handling potential markdown wrappers
   let jsonStr = text;
@@ -112,25 +191,29 @@ ${resumeText.substring(0, 15000)} /* Truncate to avoid exceeding token limits if
   if (match) jsonStr = match[1].trim();
 
   // Clean up any stray text outside JSON brackets
-  const firstBrace = jsonStr.indexOf('{');
-  const lastBrace = jsonStr.lastIndexOf('}');
+  const firstBrace = jsonStr.indexOf("{");
+  const lastBrace = jsonStr.lastIndexOf("}");
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
     jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
   }
 
   try {
     const extractedData = JSON.parse(jsonStr);
-    
+
     // Normalize and ensure arrays exist
     return {
       skills: Array.isArray(extractedData.skills) ? extractedData.skills : [],
       experience_years: Number(extractedData.experience_years) || 0,
-      technologies: Array.isArray(extractedData.technologies) ? extractedData.technologies : [],
-      role_titles: Array.isArray(extractedData.role_titles) ? extractedData.role_titles : []
+      technologies: Array.isArray(extractedData.technologies)
+        ? extractedData.technologies
+        : [],
+      role_titles: Array.isArray(extractedData.role_titles)
+        ? extractedData.role_titles
+        : [],
     };
   } catch (error) {
     console.error("Failed to parse Skill Extraction JSON:", text);
-    throw new Error("Failed to extract skills using AI");
+    return fallbackExtractFromText(resumeText);
   }
 }
 
