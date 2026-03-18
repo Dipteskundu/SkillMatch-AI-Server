@@ -1,0 +1,17 @@
+# Local environment - use Vercel dashboard env vars instead
+
+.env
+
+# Git
+
+.git
+
+# Dev-only files
+
+list-models.js
+test-gemini.js
+test-service.js
+
+# Firebase service account (set credentials via env vars on Vercel)
+
+jobmatching-firebase-adminsdk-.json
