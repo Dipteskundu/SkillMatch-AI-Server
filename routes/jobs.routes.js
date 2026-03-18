@@ -6,6 +6,8 @@ import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
 import { analyzeSkillGap } from "../services/skillGapService.js";
 import { getFirebaseService } from "../services/firebaseService.js";
+import { requireAuth } from "../middleware/requireAuth.js";
+import { requireRole } from "../middleware/requireRole.js";
 
 const router = express.Router();
 const firebaseService = getFirebaseService();
@@ -47,7 +49,7 @@ router.get("/api/jobs", async (req, res) => {
 
 // POST: Create New Job
 // =======================================
-router.post("/api/jobs", async (req, res) => {
+router.post("/api/jobs", requireAuth, requireRole("recruiter", "admin"), async (req, res) => {
   try {
     const db = getDB();
 
@@ -194,7 +196,7 @@ router.get("/api/jobs/:id", async (req, res) => {
 
 // DELETE: Delete Job By ID
 // =======================================
-router.delete("/api/jobs/:id", async (req, res) => {
+router.delete("/api/jobs/:id", requireAuth, requireRole("recruiter", "admin"), async (req, res) => {
   try {
     const db = getDB();
     const { id } = req.params;
@@ -238,7 +240,7 @@ router.delete("/api/jobs/:id", async (req, res) => {
 
 // POST: Apply to a Job
 // =======================================
-router.post("/api/jobs/:id/apply", async (req, res) => {
+router.post("/api/jobs/:id/apply", requireAuth, requireRole("candidate"), async (req, res) => {
   try {
     const db = getDB();
     const { id } = req.params;

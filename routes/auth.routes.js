@@ -52,10 +52,14 @@ router.post("/api/auth/sync-user", async (req, res) => {
       { upsert: true }
     );
 
+    // Fetch the updated/new user to return to frontend
+    const updatedUser = await users.findOne({ firebaseUid: uid });
+
     res.status(200).json({
       success: true,
       message: "User synced successfully",
-      upsertedId: result.upsertedId,
+      data: updatedUser, // Return full user object
+      isNew: !!result.upsertedId,
     });
   } catch (error) {
     console.error("SYNC USER ERROR:", error);

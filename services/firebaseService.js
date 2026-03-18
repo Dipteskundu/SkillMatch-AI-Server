@@ -10,7 +10,7 @@ export function getFirebaseService() {
   if (globalCache.service) return globalCache.service;
 
   try {
-    const serviceAccount = _require("../jobmatching-firebase-adminsdk-.json");
+    const serviceAccount = _require("../jobmatching-firebase-adminsdk.json");
     const databaseURL = `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`;
 
     if (!admin.apps.length) {

@@ -1,11 +1,13 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
+import { requireAuth } from "../middleware/requireAuth.js";
+import { requireRole } from "../middleware/requireRole.js";
 
 const router = express.Router();
 
 // --- Candidate Dashboard ---
-router.get("/api/dashboard/candidate/:uid", async (req, res) => {
+router.get("/api/dashboard/candidate/:uid", requireAuth, requireRole("candidate", "admin"), async (req, res) => {
     try {
         const db = getDB();
         const { uid } = req.params;
@@ -69,7 +71,7 @@ router.get("/api/dashboard/candidate/:uid", async (req, res) => {
 });
 
 // --- Recruiter Dashboard ---
-router.get("/api/dashboard/recruiter/:uid", async (req, res) => {
+router.get("/api/dashboard/recruiter/:uid", requireAuth, requireRole("recruiter", "admin"), async (req, res) => {
     try {
         const db = getDB();
         const { uid } = req.params;
@@ -130,7 +132,7 @@ router.get("/api/dashboard/recruiter/:uid", async (req, res) => {
 });
 
 // --- Admin Dashboard ---
-router.get("/api/dashboard/admin", async (req, res) => {
+router.get("/api/dashboard/admin", requireAuth, requireRole("admin"), async (req, res) => {
     try {
         const db = getDB();
 
