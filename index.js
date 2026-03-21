@@ -1,5 +1,4 @@
-// index.js
-// Local development server (do not use in Vercel)
+
 
 import "dotenv/config";
 import app from "./api/index.js";

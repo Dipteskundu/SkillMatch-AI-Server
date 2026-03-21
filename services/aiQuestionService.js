@@ -81,27 +81,40 @@ async function generateWithFallback(prompt, retryCount = 0) {
 }
 
 /**
- * Generate technical interview questions for up to 3 skills (3 per skill)
+ * Generate beginner-friendly MCQ questions for up to 3 skills (3 per skill)
  */
 async function generateSkillQuestions(skillsArray) {
   const skills = Array.isArray(skillsArray) ? skillsArray.slice(0, 3) : [skillsArray];
   if (skills.length === 0) throw new Error("At least one skill is required");
   const skillsList = skills.join(", ");
 
-  const prompt = `Generate technical interview questions for the following skills: ${skillsList}.
+  const prompt = `Generate beginner-friendly multiple choice technical questions for the following skills: ${skillsList}.
 
 Requirements:
-- For EACH skill, generate exactly 3 questions (1 simple, 1 medium, 1 hard).
+- For EACH skill, generate exactly 3 questions.
 - Total questions should be exactly ${skills.length * 3}.
-- Use very simple English.
-- Test deep understanding.
+- Keep all questions EASY to MODERATE level for entry-level candidates.
+- Use simple English and practical basics.
+- NO trick questions.
 - Keep questions short.
-- Return ONLY a valid JSON array. Each object must have: "id" (string), "text" (string), "difficulty" (string - "Simple", "Medium", "Hard"), and "skill" (string - the skill it belongs to).
+- Return ONLY a valid JSON array. Each object must have:
+  - "id" (string)
+  - "text" (string)
+  - "difficulty" (string, use "Simple" or "Medium" only)
+  - "skill" (string)
+  - "options" (array of exactly 4 short strings)
+  - "correctAnswer" (string, must exactly match one item from options)
 
 Example JSON format:
 [
-  {"id": "q1", "text": "What is the purpose of a React component?", "difficulty": "Simple", "skill": "React"},
-  {"id": "q2", "text": "Why do we use useEffect in React applications?", "difficulty": "Medium", "skill": "React"}
+  {
+    "id": "q1",
+    "text": "What is the main purpose of a React component?",
+    "difficulty": "Simple",
+    "skill": "React",
+    "options": ["Store files", "Build reusable UI parts", "Compile JavaScript", "Manage DNS"],
+    "correctAnswer": "Build reusable UI parts"
+  }
 ]
 
 Return ONLY the JSON array, no markdown, no extra text.`;
@@ -118,12 +131,31 @@ Return ONLY the JSON array, no markdown, no extra text.`;
     if (!Array.isArray(questions)) {
       throw new Error("Invalid question format from AI");
     }
-    return questions.map((q, i) => ({
-      id: q.id || `q${i + 1}`,
-      text: q.text || "",
-      difficulty: q.difficulty || "Medium",
-      skill: q.skill || skills[0]
-    }));
+    return questions.map((q, i) => {
+      const options = Array.isArray(q.options)
+        ? q.options
+            .map((opt) => String(opt || "").trim())
+            .filter(Boolean)
+            .slice(0, 4)
+        : [];
+
+      const normalizedDifficulty =
+        String(q.difficulty || "").toLowerCase() === "simple" ? "Simple" : "Medium";
+
+      const fallbackOptions = ["Option A", "Option B", "Option C", "Option D"];
+      const finalOptions = options.length === 4 ? options : fallbackOptions;
+      const givenCorrect = String(q.correctAnswer || "").trim();
+      const correctAnswer = finalOptions.includes(givenCorrect) ? givenCorrect : finalOptions[0];
+
+      return {
+        id: q.id || `q${i + 1}`,
+        text: q.text || "",
+        difficulty: normalizedDifficulty,
+        skill: q.skill || skills[0],
+        options: finalOptions,
+        correctAnswer,
+      };
+    });
   } catch (error) {
     console.error("Failed to parse Skill Questions JSON", error);
     throw new Error("Failed to parse questions from AI");

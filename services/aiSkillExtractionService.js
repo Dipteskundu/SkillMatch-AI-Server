@@ -36,6 +36,50 @@ function sleep(seconds) {
   return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
 }
 
+function uniqStrings(items) {
+  return Array.from(
+    new Set(
+      (Array.isArray(items) ? items : [])
+        .map((v) => String(v || "").trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function parseQuotedItems(segment = "") {
+  const out = [];
+  const regex = /"([^"]+)"/g;
+  let match;
+  while ((match = regex.exec(segment)) !== null) {
+    out.push(match[1]);
+  }
+  return uniqStrings(out);
+}
+
+function salvageFromMalformedJson(rawText) {
+  const skillsSeg = rawText.match(/"skills"\s*:\s*\[([\s\S]*?)\]/i)?.[1] || "";
+  const techSeg = rawText.match(/"technologies"\s*:\s*\[([\s\S]*?)\]/i)?.[1] || "";
+  const roleSeg = rawText.match(/"role_titles"\s*:\s*\[([\s\S]*?)\]/i)?.[1] || "";
+  const yearsRaw = rawText.match(/"experience_years"\s*:\s*([0-9]+(?:\.[0-9]+)?)/i)?.[1];
+
+  return {
+    skills: parseQuotedItems(skillsSeg),
+    technologies: parseQuotedItems(techSeg),
+    role_titles: parseQuotedItems(roleSeg),
+    experience_years: Number(yearsRaw) || 0,
+  };
+}
+
+function extractTechFallback(resumeText) {
+  const knownTech = [
+    "JavaScript", "TypeScript", "React", "Next.js", "Node.js", "Express", "MongoDB",
+    "PostgreSQL", "MySQL", "Firebase", "Python", "Java", "C++", "C", "Tailwind CSS",
+    "Docker", "Kubernetes", "AWS", "Azure", "GCP", "Git", "Redux", "HTML", "CSS",
+  ];
+  const lower = String(resumeText || "").toLowerCase();
+  return knownTech.filter((t) => lower.includes(t.toLowerCase()));
+}
+
 async function generateWithFallback(prompt, retryCount = 0) {
   if (!genAI) {
     throw new Error("Gemini API not configured. Set GEMINI_API_KEY in .env");
@@ -130,7 +174,16 @@ ${resumeText.substring(0, 15000)} /* Truncate to avoid exceeding token limits if
     };
   } catch (error) {
     console.error("Failed to parse Skill Extraction JSON:", text);
-    throw new Error("Failed to extract skills using AI");
+    const salvaged = salvageFromMalformedJson(text);
+    const fallbackTech = extractTechFallback(resumeText);
+    const mergedTech = uniqStrings([...(salvaged.technologies || []), ...fallbackTech]);
+
+    return {
+      skills: uniqStrings(salvaged.skills),
+      experience_years: Number(salvaged.experience_years) || 0,
+      technologies: mergedTech,
+      role_titles: uniqStrings(salvaged.role_titles),
+    };
   }
 }
 
