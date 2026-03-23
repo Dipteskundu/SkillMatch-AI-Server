@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { URL } from "url";
 
 import { connectDB } from "../config/db.js";
 import { loadEnv } from "../config/env.js";
@@ -45,9 +46,46 @@ const corsOrigins = env.CORS_ORIGIN
       .filter(Boolean)
   : null;
 
+function isAllowedVercelFrontend(origin) {
+  if (!origin) return false;
+
+  try {
+    const { protocol, hostname } = new URL(origin);
+    if (protocol !== "https:") return false;
+
+    if (hostname === "hiring-platform-ai.vercel.app") return true;
+    if (hostname === "hiring-platform-ai-prosuns-projects.vercel.app")
+      return true;
+
+    return /^hiring-platform-[a-z0-9-]+-prosuns-projects\.vercel\.app$/i.test(
+      hostname,
+    );
+  } catch {
+    return false;
+  }
+}
+
+function resolveCorsOrigin(origin, callback) {
+  if (!origin) {
+    callback(null, true);
+    return;
+  }
+
+  if (
+    !corsOrigins ||
+    corsOrigins.includes(origin) ||
+    isAllowedVercelFrontend(origin)
+  ) {
+    callback(null, true);
+    return;
+  }
+
+  callback(new Error(`CORS blocked for origin: ${origin}`));
+}
+
 app.use(
   cors({
-    origin: corsOrigins || "*",
+    origin: resolveCorsOrigin,
     credentials: false,
   }),
 );
@@ -55,22 +93,29 @@ app.use(
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-app.get("/", (req, res) => {
+app.get("/api/debug-log", (req, res) => {
   res.status(200).json({
     success: true,
-    service: "JobMatch-AI-Server",
-    envOk: !hasFatalEnv,
-    warnings: !isProd ? warnings : undefined,
-    timestamp: new Date().toISOString(),
+    message: "Debug route active",
+    time: new Date().toISOString(),
+    env: {
+      hasGemini: !!process.env.GEMINI_API_KEY,
+      port: process.env.PORT,
+    }
   });
 });
 
+app.get("/", (req, res) => {
+  res.status(200).json({ success: true, message: "SkillMatch AI API is running." });
+});
+
+// Health check — both paths for compatibility
 app.get("/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    status: "ok",
-    timestamp: new Date().toISOString(),
-  });
+  res.status(200).json({ success: true, status: "ok", timestamp: new Date().toISOString() });
+});
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ success: true, status: "ok", timestamp: new Date().toISOString() });
 });
 
 app.use(async (req, res, next) => {
@@ -86,8 +131,9 @@ app.use(async (req, res, next) => {
     await connectDB();
     return next();
   } catch (error) {
-    error.status = error.status || 500;
-    return next(error);
+    req.dbUnavailable = true;
+    console.warn(`DB unavailable for ${req.method} ${req.originalUrl}: ${error.message}`);
+    return next();
   }
 });
 

@@ -7,6 +7,7 @@ import { getDB } from "../config/db.js";
 import adminGate from "../middleware/adminGate.js";
 import { analyzeSkillGap } from "../services/skillGapService.js";
 import { getFirebaseService } from "../services/firebaseService.js";
+import { getRuntimeSavedJobs, saveRuntimeJob } from "../services/runtimeStore.js";
 
 const router = express.Router();
 const firebaseService = getFirebaseService();
@@ -14,6 +15,16 @@ const firebaseService = getFirebaseService();
 // GET: Get All Jobs
 // =======================================
 router.get("/api/jobs", async (req, res) => {
+  if (req.dbUnavailable) {
+    return res.status(200).json({
+      success: true,
+      count: mockJobs.length,
+      data: mockJobs,
+      fallback: true,
+      message: "Showing fallback jobs while the database is unavailable.",
+    });
+  }
+
   try {
     // 1️⃣ Get database
     const db = getDB();
@@ -152,6 +163,22 @@ router.post("/api/jobs", async (req, res) => {
 // GET: Get Single Job By ID
 // =======================================
 router.get("/api/jobs/:id", async (req, res) => {
+  if (req.dbUnavailable) {
+    const job = mockJobs.find((item) => item._id === req.params.id);
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: job,
+      fallback: true,
+    });
+  }
+
   try {
     const db = getDB();
     const { id } = req.params;
@@ -374,6 +401,25 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
 // POST: Save Job
 // =======================================
 router.post("/api/jobs/:id/save", async (req, res) => {
+  if (req.dbUnavailable) {
+    const { uid, email } = req.body;
+
+    if (!uid || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "uid and email are required",
+      });
+    }
+
+    saveRuntimeJob(uid, req.params.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Job saved successfully",
+      fallback: true,
+    });
+  }
+
   try {
     const db = getDB();
     const { id } = req.params;
@@ -427,6 +473,18 @@ router.post("/api/jobs/:id/save", async (req, res) => {
 // GET: Get Saved Jobs for User
 // =======================================
 router.get("/api/jobs/saved/:uid", async (req, res) => {
+  if (req.dbUnavailable) {
+    const savedIds = getRuntimeSavedJobs(req.params.uid);
+    const data = mockJobs.filter((job) => savedIds.includes(job._id));
+
+    return res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+      fallback: true,
+    });
+  }
+
   try {
     const db = getDB();
     const { uid } = req.params;

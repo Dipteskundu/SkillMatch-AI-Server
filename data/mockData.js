@@ -1,0 +1,192 @@
+export const mockJobs = [
+  {
+    _id: "mock-job-1",
+    title: "Frontend Engineer",
+    company: "NovaStack",
+    location: "Remote",
+    salary: "$90k - $120k",
+    skills: ["React", "Next.js", "TypeScript", "Tailwind CSS"],
+    employmentType: "Full-time",
+    posted: "2 days ago",
+    createdAt: new Date("2026-03-20T09:00:00.000Z"),
+  },
+  {
+    _id: "mock-job-2",
+    title: "Backend Developer",
+    company: "CloudForge",
+    location: "Austin, TX",
+    salary: "$100k - $135k",
+    skills: ["Node.js", "Express", "MongoDB", "REST APIs"],
+    employmentType: "Full-time",
+    posted: "1 week ago",
+    createdAt: new Date("2026-03-15T09:00:00.000Z"),
+  },
+  {
+    _id: "mock-job-3",
+    title: "AI Product Designer",
+    company: "Signal Labs",
+    location: "San Francisco, CA",
+    salary: "$110k - $145k",
+    skills: ["Figma", "Product Design", "AI UX", "Design Systems"],
+    employmentType: "Hybrid",
+    posted: "3 days ago",
+    createdAt: new Date("2026-03-19T09:00:00.000Z"),
+  },
+  {
+    _id: "mock-job-4",
+    title: "Data Analyst",
+    company: "MetricPeak",
+    location: "New York, NY",
+    salary: "$75k - $95k",
+    skills: ["SQL", "Python", "Power BI", "Excel"],
+    employmentType: "Full-time",
+    posted: "5 days ago",
+    createdAt: new Date("2026-03-17T09:00:00.000Z"),
+  },
+  {
+    _id: "mock-job-5",
+    title: "DevOps Engineer",
+    company: "InfraPilot",
+    location: "Seattle, WA",
+    salary: "$120k - $155k",
+    skills: ["AWS", "Docker", "Kubernetes", "CI/CD"],
+    employmentType: "Full-time",
+    posted: "Today",
+    createdAt: new Date("2026-03-22T09:00:00.000Z"),
+  },
+  {
+    _id: "mock-job-6",
+    title: "Junior Full Stack Developer",
+    company: "BrightLoop",
+    location: "Remote",
+    salary: "$60k - $80k",
+    skills: ["JavaScript", "React", "Node.js", "MongoDB"],
+    employmentType: "Internship",
+    posted: "4 days ago",
+    createdAt: new Date("2026-03-18T09:00:00.000Z"),
+  },
+];
+
+export const mockCompanies = [
+  {
+    _id: "mock-company-1",
+    name: "NovaStack",
+    industry: "Technology",
+    location: "Remote-first",
+    description: "Builds modern SaaS tools for product and engineering teams.",
+    employees: 240,
+    openJobs: 12,
+    rating: 4.8,
+    website: "https://novastack.example.com",
+  },
+  {
+    _id: "mock-company-2",
+    name: "CloudForge",
+    industry: "Technology",
+    location: "Austin, TX",
+    description: "Cloud infrastructure partner focused on reliability and scale.",
+    employees: 410,
+    openJobs: 8,
+    rating: 4.6,
+    website: "https://cloudforge.example.com",
+  },
+  {
+    _id: "mock-company-3",
+    name: "MetricPeak",
+    industry: "Finance",
+    location: "New York, NY",
+    description: "Turns complex business data into practical growth insights.",
+    employees: 180,
+    openJobs: 6,
+    rating: 4.5,
+    website: "https://metricpeak.example.com",
+  },
+  {
+    _id: "mock-company-4",
+    name: "Signal Labs",
+    industry: "Healthcare",
+    location: "San Francisco, CA",
+    description: "Designs AI-assisted products for health operations teams.",
+    employees: 95,
+    openJobs: 5,
+    rating: 4.7,
+    website: "https://signallabs.example.com",
+  },
+];
+
+export function buildMockCandidateDashboard(profile = {}) {
+  return {
+    stats: {
+      applied: 2,
+      saved: 3,
+      shortlisted: 1,
+      rejected: 0,
+      interviews: 1,
+    },
+    applications: mockJobs.slice(0, 2).map((job, index) => ({
+      _id: `mock-application-${index + 1}`,
+      firebaseUid: profile.firebaseUid || "",
+      jobId: job._id,
+      jobTitle: job.title,
+      company: job.company,
+      location: job.location,
+      status: index === 0 ? "interviewing" : "shortlisted",
+      createdAt: job.createdAt,
+      timeline: [{ status: "submitted", timestamp: job.createdAt }],
+    })),
+    missingSkills: ["System Design", "Testing", "GraphQL"],
+    profileCompletion: profile.profileCompletion || 42,
+    profile,
+  };
+}
+
+export function buildMockRecruiterDashboard() {
+  return {
+    stats: {
+      activeJobs: mockJobs.length,
+      totalApplicants: 14,
+      shortlisted: 4,
+      interviews: 2,
+    },
+    jobs: mockJobs.slice(0, 5),
+    recentApplications: mockJobs.slice(0, 3).map((job, index) => ({
+      _id: `mock-recruiter-application-${index + 1}`,
+      jobId: job._id,
+      jobTitle: job.title,
+      company: job.company,
+      email: `candidate${index + 1}@example.com`,
+      status: index === 0 ? "submitted" : "shortlisted",
+      communicationScore: 80 + index * 4,
+      communicationStatus: "completed",
+      createdAt: job.createdAt,
+    })),
+    topCandidates: mockJobs.slice(0, 4).map((job, index) => ({
+      _id: `mock-top-candidate-${index + 1}`,
+      jobId: job._id,
+      jobTitle: job.title,
+      email: `topcandidate${index + 1}@example.com`,
+      status: "shortlisted",
+      communicationScore: 92 - index,
+      communicationStatus: "completed",
+      createdAt: job.createdAt,
+    })),
+  };
+}
+
+export function buildMockAdminDashboard() {
+  return {
+    stats: {
+      totalUsers: 128,
+      totalJobs: mockJobs.length,
+      totalApplications: 52,
+      totalCompanies: mockCompanies.length,
+    },
+    growth: [
+      { month: "Jan", users: 52, jobs: 18 },
+      { month: "Feb", users: 88, jobs: 24 },
+      { month: "Mar", users: 128, jobs: mockJobs.length },
+    ],
+    recentUsers: [],
+    recentJobs: mockJobs.slice(0, 5),
+  };
+}

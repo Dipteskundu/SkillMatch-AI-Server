@@ -2,6 +2,7 @@
 // Service to extract text from various resume file formats (PDF, DOCX, TXT)
 
 import fs from "fs";
+import path from "path";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
@@ -28,7 +29,7 @@ async function extractTextFromResume(file) {
     throw new Error("No file provided for parsing");
   }
 
-  const mimeType = file.mimetype;
+  const mimeType = resolveMimeType(file);
   const buffer = ensureBuffer(file);
 
   if (!buffer) {
@@ -92,7 +93,13 @@ async function extractTextFromResume(file) {
       );
     }
 
-    extractedText = extractedText.replace(/\n\s*\n/g, "\n\n").trim();
+    extractedText = String(extractedText || "")
+      .replace(/\n\s*\n/g, "\n\n")
+      .trim();
+
+    if (!extractedText) {
+      throw new Error("No readable text found in resume");
+    }
 
     return extractedText;
   } catch (error) {
