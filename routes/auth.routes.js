@@ -149,7 +149,7 @@ router.put("/api/auth/profile/:uid", async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    if (allowedUpdates.skills && Array.isArray(allowedUpdates.skills)) {
+    if (allowedUpdates.skills && Array.isArray(allowedUpdates.skills) && !user.isSkillVerified) {
       const currentVerifiedSkills = user.verifiedSkills || [];
       const unverified = allowedUpdates.skills.filter(s => !currentVerifiedSkills.includes(s));
       
