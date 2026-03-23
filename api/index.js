@@ -5,17 +5,21 @@ import cors from "cors";
 import { connectDB } from "../config/db.js";
 import { loadEnv } from "../config/env.js";
 
+import authRoutes from "../routes/auth.routes.js";
 import jobsRoutes from "../routes/jobs.routes.js";
 import companiesRoutes from "../routes/companies.routes.js";
-import authRoutes from "../routes/auth.routes.js";
 import dashboardRoutes from "../routes/dashboard.routes.js";
 import communicationRoutes from "../routes/communication.routes.js";
 import transparencyRoutes from "../routes/transparency.routes.js";
 import skillTestRoutes from "../routes/skillTest.routes.js";
 import resumeRoutes from "../routes/resume.routes.js";
-import skillGapRoutes from "../routes/skillGapRoutes.js";
 import preApplyRoutes from "../routes/preApply.routes.js";
 import commVerificationRoutes from "../routes/commVerification.routes.js";
+import adminRoutes from "../routes/admin.routes.js";
+import interviewRoutes from "../routes/interview.routes.js";
+import notificationsRoutes from "../routes/notifications.routes.js";
+import applicationsRoutes from "../routes/applications.routes.js";
+import assistantRoutes from "../routes/assistant.routes.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -36,14 +40,16 @@ if (errors.length) {
 const hasFatalEnv = errors.length > 0;
 
 const corsOrigins = env.CORS_ORIGIN
-  ? env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean)
+  ? env.CORS_ORIGIN.split(",")
+      .map((o) => o.trim())
+      .filter(Boolean)
   : null;
 
 app.use(
   cors({
     origin: corsOrigins || "*",
     credentials: false,
-  })
+  }),
 );
 
 app.use(express.json({ limit: "2mb" }));
@@ -93,9 +99,13 @@ app.use(communicationRoutes);
 app.use(transparencyRoutes);
 app.use(skillTestRoutes);
 app.use(resumeRoutes);
-app.use(skillGapRoutes);
 app.use(preApplyRoutes);
 app.use(commVerificationRoutes);
+app.use(adminRoutes);
+app.use(interviewRoutes);
+app.use(notificationsRoutes);
+app.use(applicationsRoutes);
+app.use(assistantRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

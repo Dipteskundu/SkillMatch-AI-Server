@@ -2,10 +2,11 @@
 // Handles company-related API routes
 
 import express from "express";
+import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
+import adminGate from "../middleware/adminGate.js";
 
 const router = express.Router();
-
 
 async function getAllCompaniesHandler(req, res) {
   try {
@@ -14,10 +15,7 @@ async function getAllCompaniesHandler(req, res) {
 
     // 2️⃣ Fetch all companies from the correct collection
     //    You said your collection is named "companies_info"
-    const companies = await db
-      .collection("companies_info")
-      .find({})
-      .toArray();
+    const companies = await db.collection("companies_info").find({}).toArray();
 
     // 3️⃣ Send response
     res.status(200).json({
@@ -25,7 +23,6 @@ async function getAllCompaniesHandler(req, res) {
       count: companies.length,
       data: companies,
     });
-
   } catch (error) {
     console.error("GET Companies Error:", error);
 
@@ -41,13 +38,20 @@ async function getAllCompaniesHandler(req, res) {
 router.get("/api/v1/companies", getAllCompaniesHandler);
 router.get("/api/companies", getAllCompaniesHandler);
 
-
 async function createCompanyHandler(req, res) {
   try {
     const db = getDB();
 
     // 1️⃣ Extract data from request body
-    const { name, industry, location, description, logo, companySize, website } = req.body;
+    const {
+      name,
+      industry,
+      location,
+      description,
+      logo,
+      companySize,
+      website,
+    } = req.body;
 
     // 2️⃣ Simple validation (beginner level)
     if (!name || !industry || !location) {
@@ -70,9 +74,7 @@ async function createCompanyHandler(req, res) {
     };
 
     // 4️⃣ Insert into database
-    const result = await db
-      .collection("companies_info")
-      .insertOne(newCompany);
+    const result = await db.collection("companies_info").insertOne(newCompany);
 
     // 5️⃣ Send response
     res.status(201).json({
@@ -83,7 +85,6 @@ async function createCompanyHandler(req, res) {
         ...newCompany,
       },
     });
-
   } catch (error) {
     console.error("POST Company Error:", error);
 
@@ -98,7 +99,6 @@ async function createCompanyHandler(req, res) {
 // ===============================
 router.post("/api/v1/companies", createCompanyHandler);
 router.post("/api/companies", createCompanyHandler);
-
 
 // POST: Follow a Company
 // ===============================
@@ -127,7 +127,7 @@ router.post("/api/v1/companies/:id/follow", async (req, res) => {
           email,
         },
       },
-      { upsert: true }
+      { upsert: true },
     );
 
     res.status(200).json({
@@ -143,5 +143,37 @@ router.post("/api/v1/companies/:id/follow", async (req, res) => {
   }
 });
 
+// DELETE: Delete Company By ID (Admin only)
+// =======================================
+router.delete("/api/companies/:id", adminGate, async (req, res) => {
+  try {
+    const db = getDB();
+    const { id } = req.params;
+
+    if (!ObjectId.isValid(id)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid company ID" });
+    }
+
+    const result = await db
+      .collection("companies_info")
+      .deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Company not found" });
+    }
+
+    res
+      .status(200)
+      .json({ success: true, message: "Company deleted successfully" });
+  } catch (err) {
+    console.error("DELETE Company Error:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error while deleting company" });
+  }
+});
 
 export default router;

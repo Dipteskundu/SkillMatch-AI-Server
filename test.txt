@@ -1,0 +1,14 @@
+This is a test resume file.
+John Doe
+Software Engineer
+
+Experience:
+- 5 years of experience in software development
+- Worked with JavaScript, React, Node.js, MongoDB
+- Proficient in Python, Java, and TypeScript
+
+Skills:
+JavaScript, React, Node.js, MongoDB, Python, Java, TypeScript, HTML, CSS
+
+Education:
+Bachelor of Science in Computer Science

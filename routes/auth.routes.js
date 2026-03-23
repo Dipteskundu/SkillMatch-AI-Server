@@ -13,14 +13,7 @@ router.post("/api/auth/sync-user", async (req, res) => {
     const db = getDB();
     const users = db.collection("users");
 
-    const {
-      uid,
-      email,
-      displayName,
-      provider,
-      photoURL,
-      role,
-    } = req.body;
+    const { uid, email, displayName, provider, photoURL, role } = req.body;
 
     if (!uid || !email) {
       return res.status(400).json({
@@ -41,16 +34,49 @@ router.post("/api/auth/sync-user", async (req, res) => {
         displayName: displayName || "",
         provider: provider || "password",
         photoURL: photoURL || "",
-        role: role || "candidate",
         lastLoginAt: now,
       },
     };
 
-    const result = await users.updateOne(
-      { firebaseUid: uid },
-      update,
-      { upsert: true }
-    );
+    // Only set role if it's provided, otherwise preserve existing role
+    if (role) {
+      update.$set.role = role;
+    }
+
+    const result = await users.updateOne({ firebaseUid: uid }, update, {
+      upsert: true,
+    });
+
+    // If this was a new user (upserted) and no role was provided, set default role
+    if (result.upsertedId && !role) {
+      // Check if user is likely a recruiter based on email
+      const recruiterDomains = [
+        "@company.com",
+        "@recruiter.com",
+        "@hiring.com",
+      ];
+      const recruiterKeywords = [
+        "recruiter",
+        "hiring",
+        "talent",
+        "hr",
+        "staff",
+      ];
+      const emailDomain = email ? email.toLowerCase() : "";
+
+      const isLikelyRecruiter =
+        recruiterDomains.some((domain) => emailDomain.includes(domain)) ||
+        recruiterKeywords.some(
+          (keyword) =>
+            emailDomain.includes(keyword) ||
+            (displayName && displayName.toLowerCase().includes(keyword)),
+        );
+
+      await users.updateOne(
+        { _id: result.upsertedId },
+        { $set: { role: isLikelyRecruiter ? "recruiter" : "candidate" } },
+      );
+    }
 
     res.status(200).json({
       success: true,
@@ -76,15 +102,17 @@ router.get("/api/auth/profile/:uid", async (req, res) => {
 
     const user = await users.findOne({ firebaseUid: uid });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     // Calculate profile completion percentage
     const profileCompletion = calculateProfileCompletion(user);
-    
-    res.status(200).json({ 
-      success: true, 
-      data: { ...user, profileCompletion } 
+
+    res.status(200).json({
+      success: true,
+      data: { ...user, profileCompletion },
     });
   } catch (error) {
     console.error("GET PROFILE ERROR:", error);
@@ -95,35 +123,35 @@ router.get("/api/auth/profile/:uid", async (req, res) => {
 // Helper function to calculate profile completion
 function calculateProfileCompletion(user) {
   const fields = [
-    { key: 'displayName', weight: 8 },
-    { key: 'photoURL', weight: 8 },
-    { key: 'title', weight: 8 },
-    { key: 'location', weight: 4 },
-    { key: 'phone', weight: 4 },
-    { key: 'bio', weight: 12 },
-    { key: 'skills', weight: 12, isArray: true },
-    { key: 'experience', weight: 12, isArray: true },
-    { key: 'education', weight: 8, isArray: true },
-    { key: 'projects', weight: 8, isArray: true },
-    { key: 'certificates', weight: 6, isArray: true },
-    { key: 'portfolioUrl', weight: 4 },
-    { key: 'linkedin', weight: 3 },
-    { key: 'github', weight: 3 },
+    { key: "displayName", weight: 8 },
+    { key: "photoURL", weight: 8 },
+    { key: "title", weight: 8 },
+    { key: "location", weight: 4 },
+    { key: "phone", weight: 4 },
+    { key: "bio", weight: 12 },
+    { key: "skills", weight: 12, isArray: true },
+    { key: "experience", weight: 12, isArray: true },
+    { key: "education", weight: 8, isArray: true },
+    { key: "projects", weight: 8, isArray: true },
+    { key: "certificates", weight: 6, isArray: true },
+    { key: "portfolioUrl", weight: 4 },
+    { key: "linkedin", weight: 3 },
+    { key: "github", weight: 3 },
   ];
 
   let totalScore = 0;
   let maxScore = 0;
 
-  fields.forEach(field => {
+  fields.forEach((field) => {
     maxScore += field.weight;
     const value = user[field.key];
-    
+
     if (field.isArray) {
       if (Array.isArray(value) && value.length > 0) {
         totalScore += field.weight;
       }
     } else {
-      if (value && value.toString().trim() !== '') {
+      if (value && value.toString().trim() !== "") {
         totalScore += field.weight;
       }
     }
@@ -142,30 +170,51 @@ router.put("/api/auth/profile/:uid", async (req, res) => {
     const updateData = req.body;
 
     // Filter out restricted fields
-    const { _id, firebaseUid, email, createdAt, isSkillVerified, verifiedSkills, ...allowedUpdates } = updateData;
+    const {
+      _id,
+      firebaseUid,
+      email,
+      createdAt,
+      isSkillVerified,
+      verifiedSkills,
+      ...allowedUpdates
+    } = updateData;
 
     const user = await users.findOne({ firebaseUid: uid });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
-    if (allowedUpdates.skills && Array.isArray(allowedUpdates.skills) && !user.isSkillVerified) {
+    if (
+      allowedUpdates.skills &&
+      Array.isArray(allowedUpdates.skills) &&
+      !user.isSkillVerified
+    ) {
       const currentVerifiedSkills = user.verifiedSkills || [];
-      const unverified = allowedUpdates.skills.filter(s => !currentVerifiedSkills.includes(s));
-      
+      const unverified = allowedUpdates.skills.filter(
+        (s) => !currentVerifiedSkills.includes(s),
+      );
+
       if (unverified.length > 0) {
         allowedUpdates.isSkillVerified = false;
-      } else if (currentVerifiedSkills.length > 0 && allowedUpdates.skills.length > 0) {
+      } else if (
+        currentVerifiedSkills.length > 0 &&
+        allowedUpdates.skills.length > 0
+      ) {
         allowedUpdates.isSkillVerified = true;
       }
     }
 
     const result = await users.updateOne(
       { firebaseUid: uid },
-      { $set: { ...allowedUpdates, updatedAt: new Date() } }
+      { $set: { ...allowedUpdates, updatedAt: new Date() } },
     );
 
-    res.status(200).json({ success: true, message: "Profile updated successfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Profile updated successfully" });
   } catch (error) {
     console.error("UPDATE PROFILE ERROR:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -173,4 +222,3 @@ router.put("/api/auth/profile/:uid", async (req, res) => {
 });
 
 export default router;
-

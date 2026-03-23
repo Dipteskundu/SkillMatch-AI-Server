@@ -4,13 +4,12 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
+import adminGate from "../middleware/adminGate.js";
 import { analyzeSkillGap } from "../services/skillGapService.js";
 import { getFirebaseService } from "../services/firebaseService.js";
 
 const router = express.Router();
 const firebaseService = getFirebaseService();
-
-
 
 // GET: Get All Jobs
 // =======================================
@@ -21,10 +20,7 @@ router.get("/api/jobs", async (req, res) => {
 
     // 2️⃣ Fetch all jobs from the correct collection
     //    You said your collection is named "find_jobs"
-    const jobs = await db
-      .collection("find_jobs")
-      .find({})
-      .toArray();
+    const jobs = await db.collection("find_jobs").find({}).toArray();
 
     // 3️⃣ Send response
     res.status(200).json({
@@ -32,7 +28,6 @@ router.get("/api/jobs", async (req, res) => {
       count: jobs.length,
       data: jobs,
     });
-
   } catch (error) {
     console.error("GET Jobs Error:", error);
 
@@ -42,8 +37,6 @@ router.get("/api/jobs", async (req, res) => {
     });
   }
 });
-
-
 
 // POST: Create New Job
 // =======================================
@@ -87,9 +80,7 @@ router.post("/api/jobs", async (req, res) => {
     };
 
     // 4️⃣ Insert into database
-    const result = await db
-      .collection("find_jobs")
-      .insertOne(newJob);
+    const result = await db.collection("find_jobs").insertOne(newJob);
 
     // 5️⃣ Send response
     res.status(201).json({
@@ -105,14 +96,23 @@ router.post("/api/jobs", async (req, res) => {
     if (firebaseService) {
       setImmediate(async () => {
         try {
-          const requiredSkills = (newJob.skills || []).map(s => s.toLowerCase().trim());
+          const requiredSkills = (newJob.skills || []).map((s) =>
+            s.toLowerCase().trim(),
+          );
           if (requiredSkills.length > 0) {
-            const users = await db.collection("users").find({ role: { $ne: "recruiter" } }).toArray();
+            const users = await db
+              .collection("users")
+              .find({ role: { $ne: "recruiter" } })
+              .toArray();
             for (const candidate of users) {
-              const candidateSkills = (candidate.skills || []).map(s => s.toLowerCase().trim());
+              const candidateSkills = (candidate.skills || []).map((s) =>
+                s.toLowerCase().trim(),
+              );
               if (!candidateSkills.length) continue;
 
-              const matching = requiredSkills.filter(s => candidateSkills.includes(s));
+              const matching = requiredSkills.filter((s) =>
+                candidateSkills.includes(s),
+              );
               const fitScore = (matching.length / requiredSkills.length) * 100;
 
               if (fitScore >= 70 && candidate.firebaseUid) {
@@ -124,17 +124,21 @@ router.post("/api/jobs", async (req, res) => {
                   company: newJob.company,
                   message: `New job match (${Math.round(fitScore)}% Fit): ${newJob.title} at ${newJob.company}`,
                   read: false,
-                  createdAt: new Date()
+                  createdAt: new Date(),
                 };
                 await db.collection("notifications").insertOne(notifObj);
-                await firebaseService.sendNotification(candidate.firebaseUid, notifObj);
+                await firebaseService.sendNotification(
+                  candidate.firebaseUid,
+                  notifObj,
+                );
               }
             }
           }
-        } catch (err) { console.error("Job match notification error:", err); }
+        } catch (err) {
+          console.error("Job match notification error:", err);
+        }
       });
     }
-
   } catch (error) {
     console.error("POST Job Error:", error);
 
@@ -144,8 +148,6 @@ router.post("/api/jobs", async (req, res) => {
     });
   }
 });
-
-
 
 // GET: Get Single Job By ID
 // =======================================
@@ -179,7 +181,6 @@ router.get("/api/jobs/:id", async (req, res) => {
       success: true,
       data: job,
     });
-
   } catch (error) {
     console.error("GET Single Job Error:", error);
 
@@ -190,11 +191,9 @@ router.get("/api/jobs/:id", async (req, res) => {
   }
 });
 
-
-
 // DELETE: Delete Job By ID
 // =======================================
-router.delete("/api/jobs/:id", async (req, res) => {
+router.delete("/api/jobs/:id", adminGate, async (req, res) => {
   try {
     const db = getDB();
     const { id } = req.params;
@@ -224,7 +223,6 @@ router.delete("/api/jobs/:id", async (req, res) => {
       success: true,
       message: "Job deleted successfully",
     });
-
   } catch (error) {
     console.error("DELETE Job Error:", error);
 
@@ -234,7 +232,6 @@ router.delete("/api/jobs/:id", async (req, res) => {
     });
   }
 });
-
 
 // POST: Apply to a Job
 // =======================================
@@ -278,10 +275,14 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
 
     // --- Skill Gap Detection Start ---
     try {
-      const jobDoc = await db.collection("find_jobs").findOne({ _id: new ObjectId(id) });
+      const jobDoc = await db
+        .collection("find_jobs")
+        .findOne({ _id: new ObjectId(id) });
       const jobSkills = jobDoc?.skills || [];
 
-      const candidate = await db.collection("users").findOne({ firebaseUid: uid });
+      const candidate = await db
+        .collection("users")
+        .findOne({ firebaseUid: uid });
       const candidateSkills = candidate?.skills || [];
 
       const skillGapResult = await analyzeSkillGap(candidateSkills, jobSkills);
@@ -294,7 +295,7 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
         missingSkills: skillGapResult.missingSkills,
         matchScore: skillGapResult.matchScore,
         learningSuggestions: skillGapResult.learningSuggestions,
-        createdAt: new Date()
+        createdAt: new Date(),
       };
 
       await db.collection("skillGaps").insertOne(skillGapDoc);
@@ -314,11 +315,15 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
       setImmediate(async () => {
         try {
           // Get job document to find exact title and possibly the company
-          const jobDoc = await db.collection("find_jobs").findOne({ _id: new ObjectId(id) });
+          const jobDoc = await db
+            .collection("find_jobs")
+            .findOne({ _id: new ObjectId(id) });
           const actualTitle = jobTitle || jobDoc?.title || "a job";
           const actualCompany = company || jobDoc?.company || "";
 
-          const numApplicants = await applications.countDocuments({ jobId: new ObjectId(id) });
+          const numApplicants = await applications.countDocuments({
+            jobId: new ObjectId(id),
+          });
 
           // 1. Update Realtime Firebase Applicant Count
           await firebaseService.updateApplicantCount(id, numApplicants);
@@ -327,8 +332,11 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
           if (actualCompany) {
             // Try to match recruiter by company name or display name
             const recruiter = await db.collection("users").findOne({
-              $or: [{ companyName: actualCompany }, { displayName: actualCompany }],
-              role: "recruiter"
+              $or: [
+                { companyName: actualCompany },
+                { displayName: actualCompany },
+              ],
+              role: "recruiter",
             });
 
             if (recruiter && recruiter.firebaseUid) {
@@ -340,16 +348,20 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
                 jobTitle: actualTitle,
                 message: `New Application: ${email} applied for ${actualTitle}.`,
                 read: false,
-                createdAt: new Date()
+                createdAt: new Date(),
               };
               await db.collection("notifications").insertOne(notifObj);
-              await firebaseService.sendNotification(recruiter.firebaseUid, notifObj);
+              await firebaseService.sendNotification(
+                recruiter.firebaseUid,
+                notifObj,
+              );
             }
           }
-        } catch (err) { console.error("Application notification error:", err); }
+        } catch (err) {
+          console.error("Application notification error:", err);
+        }
       });
     }
-
   } catch (error) {
     console.error("APPLY Job Error:", error);
     res.status(500).json({
@@ -358,7 +370,6 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
     });
   }
 });
-
 
 // POST: Save Job
 // =======================================
@@ -397,7 +408,7 @@ router.post("/api/jobs/:id/save", async (req, res) => {
           email,
         },
       },
-      { upsert: true }
+      { upsert: true },
     );
 
     res.status(200).json({
@@ -412,7 +423,6 @@ router.post("/api/jobs/:id/save", async (req, res) => {
     });
   }
 });
-
 
 // GET: Get Saved Jobs for User
 // =======================================
@@ -430,30 +440,31 @@ router.get("/api/jobs/saved/:uid", async (req, res) => {
 
     const savedJobsCollection = db.collection("saved_jobs");
 
-    const savedJobs = await savedJobsCollection.aggregate([
-      { $match: { firebaseUid: uid } },
-      {
-        $lookup: {
-          from: "find_jobs",
-          localField: "jobId",
-          foreignField: "_id",
-          as: "jobDetails",
+    const savedJobs = await savedJobsCollection
+      .aggregate([
+        { $match: { firebaseUid: uid } },
+        {
+          $lookup: {
+            from: "find_jobs",
+            localField: "jobId",
+            foreignField: "_id",
+            as: "jobDetails",
+          },
         },
-      },
-      { $unwind: "$jobDetails" },
-      { $sort: { createdAt: -1 } }
-    ]).toArray();
+        { $unwind: "$jobDetails" },
+        { $sort: { createdAt: -1 } },
+      ])
+      .toArray();
 
     res.status(200).json({
       success: true,
       count: savedJobs.length,
-      data: savedJobs.map(sj => ({
+      data: savedJobs.map((sj) => ({
         _id: sj._id,
         savedAt: sj.createdAt,
-        ...sj.jobDetails
+        ...sj.jobDetails,
       })),
     });
-
   } catch (error) {
     console.error("GET Saved Jobs Error:", error);
     res.status(500).json({
@@ -462,7 +473,6 @@ router.get("/api/jobs/saved/:uid", async (req, res) => {
     });
   }
 });
-
 
 // DELETE: Unsave Job
 // =======================================
@@ -478,7 +488,9 @@ router.delete("/api/jobs/saved/:id", async (req, res) => {
       });
     }
 
-    const result = await db.collection("saved_jobs").deleteOne({ _id: new ObjectId(id) });
+    const result = await db
+      .collection("saved_jobs")
+      .deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount === 0) {
       return res.status(404).json({
@@ -491,7 +503,6 @@ router.delete("/api/jobs/saved/:id", async (req, res) => {
       success: true,
       message: "Job unsaved successfully",
     });
-
   } catch (error) {
     console.error("DELETE Unsave Job Error:", error);
     res.status(500).json({
@@ -501,5 +512,96 @@ router.delete("/api/jobs/saved/:id", async (req, res) => {
   }
 });
 
+// POST: Request Job (for recruiter approval)
+// =======================================
+router.post("/api/jobs/request", async (req, res) => {
+  console.log("POST /api/jobs/request called");
+  try {
+    const db = getDB();
+    console.log("Database connected");
+
+    // 1️⃣ Extract fields from body
+    const {
+      title,
+      company,
+      location,
+      salary,
+      skills,
+      salaryRange,
+      experienceLevel,
+      employmentType,
+      posted,
+      recruiterEmail,
+      recruiterUid,
+    } = req.body;
+
+    console.log("Request body:", {
+      title,
+      company,
+      location,
+      recruiterEmail,
+      recruiterUid,
+    });
+
+    // 2️⃣ Basic validation
+    if (!title || !company || !location || !recruiterEmail || !recruiterUid) {
+      console.log("Validation failed");
+      return res.status(400).json({
+        success: false,
+        message:
+          "Please provide title, company, location, recruiter email and UID",
+      });
+    }
+
+    // 3️⃣ Get recruiter info for proper job association
+    console.log("Fetching recruiter info...");
+    const recruiter = await db
+      .collection("users")
+      .findOne({ firebaseUid: recruiterUid });
+    const recruiterName = recruiter?.displayName || recruiterEmail;
+    const recruiterCompany = recruiter?.companyName || company;
+    console.log("Recruiter found:", !!recruiter);
+
+    // 4️⃣ Create job request object
+    const jobRequest = {
+      title,
+      company: recruiterCompany, // Use recruiter's company name
+      location,
+      salary: salary || "",
+      skills: skills || [],
+      salaryRange: salaryRange || "",
+      experienceLevel: experienceLevel || "",
+      employmentType: employmentType || "",
+      posted: posted || "",
+      recruiterEmail,
+      recruiterUid,
+      recruiterName, // Add recruiter name for better tracking
+      status: "pending", // pending admin approval
+      createdAt: new Date(),
+    };
+
+    console.log("Inserting job...");
+    // 5️⃣ Insert into database
+    const result = await db.collection("find_jobs").insertOne(jobRequest);
+    console.log("Job inserted:", result.insertedId);
+
+    // 6️⃣ Send response
+    res.status(201).json({
+      success: true,
+      message: "Job request submitted for admin approval",
+      data: {
+        _id: result.insertedId,
+        ...jobRequest,
+      },
+    });
+  } catch (error) {
+    console.error("POST Job Request Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error while submitting job request",
+    });
+  }
+});
 
 export default router;
