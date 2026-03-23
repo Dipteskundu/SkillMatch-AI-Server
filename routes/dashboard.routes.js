@@ -1,13 +1,36 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
-import { requireAuth } from "../middleware/requireAuth.js";
-import { requireRole } from "../middleware/requireRole.js";
+import {
+    buildMockAdminDashboard,
+    buildMockCandidateDashboard,
+    buildMockRecruiterDashboard,
+} from "../data/mockData.js";
+import { getRuntimeSavedJobs, getRuntimeUser } from "../services/runtimeStore.js";
 
 const router = express.Router();
 
 // --- Candidate Dashboard ---
-router.get("/api/dashboard/candidate/:uid", requireAuth, requireRole("candidate", "admin"), async (req, res) => {
+router.get("/api/dashboard/candidate/:uid", async (req, res) => {
+    if (req.dbUnavailable) {
+        const profile = getRuntimeUser(req.params.uid) || {
+            firebaseUid: req.params.uid,
+            role: "candidate",
+        };
+        const fallbackDashboard = buildMockCandidateDashboard(profile);
+        return res.status(200).json({
+            success: true,
+            data: {
+                ...fallbackDashboard,
+                stats: {
+                    ...fallbackDashboard.stats,
+                    saved: getRuntimeSavedJobs(req.params.uid).length,
+                },
+            },
+            fallback: true,
+        });
+    }
+
     try {
         const db = getDB();
         const { uid } = req.params;
@@ -71,7 +94,15 @@ router.get("/api/dashboard/candidate/:uid", requireAuth, requireRole("candidate"
 });
 
 // --- Recruiter Dashboard ---
-router.get("/api/dashboard/recruiter/:uid", requireAuth, requireRole("recruiter", "admin"), async (req, res) => {
+router.get("/api/dashboard/recruiter/:uid", async (req, res) => {
+    if (req.dbUnavailable) {
+        return res.status(200).json({
+            success: true,
+            data: buildMockRecruiterDashboard(),
+            fallback: true,
+        });
+    }
+
     try {
         const db = getDB();
         const { uid } = req.params;
@@ -132,7 +163,15 @@ router.get("/api/dashboard/recruiter/:uid", requireAuth, requireRole("recruiter"
 });
 
 // --- Admin Dashboard ---
-router.get("/api/dashboard/admin", requireAuth, requireRole("admin"), async (req, res) => {
+router.get("/api/dashboard/admin", async (req, res) => {
+    if (req.dbUnavailable) {
+        return res.status(200).json({
+            success: true,
+            data: buildMockAdminDashboard(),
+            fallback: true,
+        });
+    }
+
     try {
         const db = getDB();
 

@@ -32,7 +32,7 @@ export function loadEnv() {
 
   if (!MONGODB_URI) {
     errors.push(
-      "Missing MongoDB connection string. Set MONGODB_URI (preferred) or MONGO_URI, or DB_USER/DB_PASS/DB_HOST."
+      "Missing MongoDB connection string. Set MONGODB_URI (preferred) or MONGO_URI, or DB_USER/DB_PASS/DB_HOST.",
     );
   }
 
@@ -49,7 +49,8 @@ export function loadEnv() {
   return {
     env: {
       MONGODB_URI,
-      MONGO_DB_NAME: process.env.MONGO_DB_NAME || process.env.DB_NAME || "skillmatchai",
+      MONGO_DB_NAME:
+        process.env.MONGO_DB_NAME || process.env.DB_NAME || "skillmatchai",
       NODE_ENV: process.env.NODE_ENV || "development",
       CORS_ORIGIN: process.env.CORS_ORIGIN || "",
       PORT: process.env.PORT || "5000",

@@ -16,6 +16,7 @@ import resumeRoutes from "../routes/resume.routes.js";
 import skillGapRoutes from "../routes/skillGapRoutes.js";
 import preApplyRoutes from "../routes/preApply.routes.js";
 import commVerificationRoutes from "../routes/commVerification.routes.js";
+import chatbotRoutes from "../routes/chatbot.routes.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -49,22 +50,29 @@ app.use(
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-app.get("/", (req, res) => {
+app.get("/api/debug-log", (req, res) => {
   res.status(200).json({
     success: true,
-    service: "JobMatch-AI-Server",
-    envOk: !hasFatalEnv,
-    warnings: !isProd ? warnings : undefined,
-    timestamp: new Date().toISOString(),
+    message: "Debug route active",
+    time: new Date().toISOString(),
+    env: {
+      hasGemini: !!process.env.GEMINI_API_KEY,
+      port: process.env.PORT,
+    }
   });
 });
 
+app.get("/", (req, res) => {
+  res.status(200).json({ success: true, message: "SkillMatch AI API is running." });
+});
+
+// Health check — both paths for compatibility
 app.get("/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    status: "ok",
-    timestamp: new Date().toISOString(),
-  });
+  res.status(200).json({ success: true, status: "ok", timestamp: new Date().toISOString() });
+});
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ success: true, status: "ok", timestamp: new Date().toISOString() });
 });
 
 app.use(async (req, res, next) => {
@@ -80,8 +88,9 @@ app.use(async (req, res, next) => {
     await connectDB();
     return next();
   } catch (error) {
-    error.status = error.status || 500;
-    return next(error);
+    req.dbUnavailable = true;
+    console.warn(`DB unavailable for ${req.method} ${req.originalUrl}: ${error.message}`);
+    return next();
   }
 });
 
@@ -96,6 +105,7 @@ app.use(resumeRoutes);
 app.use(skillGapRoutes);
 app.use(preApplyRoutes);
 app.use(commVerificationRoutes);
+app.use(chatbotRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
