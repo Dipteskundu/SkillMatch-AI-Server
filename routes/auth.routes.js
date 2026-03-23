@@ -3,31 +3,53 @@
 
 import express from "express";
 import { getDB } from "../config/db.js";
+import { getRuntimeUser, upsertRuntimeUser } from "../services/runtimeStore.js";
 
 const router = express.Router();
 
 // POST /api/auth/sync-user
 // Called from frontend AFTER Firebase login/register succeeds.
 router.post("/api/auth/sync-user", async (req, res) => {
+  const {
+    uid,
+    email,
+    displayName,
+    provider,
+    photoURL,
+    role,
+  } = req.body;
+
+  if (!uid || !email) {
+    return res.status(400).json({
+      success: false,
+      message: "uid and email are required",
+    });
+  }
+
+  if (req.dbUnavailable) {
+    const now = new Date();
+    const user = upsertRuntimeUser({
+      firebaseUid: uid,
+      email,
+      displayName: displayName || "",
+      provider: provider || "password",
+      photoURL: photoURL || "",
+      role: role || "candidate",
+      createdAt: now,
+      lastLoginAt: now,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User synced successfully",
+      data: user,
+      fallback: true,
+    });
+  }
+
   try {
     const db = getDB();
     const users = db.collection("users");
-
-    const {
-      uid,
-      email,
-      displayName,
-      provider,
-      photoURL,
-      role,
-    } = req.body;
-
-    if (!uid || !email) {
-      return res.status(400).json({
-        success: false,
-        message: "uid and email are required",
-      });
-    }
 
     const now = new Date();
 
@@ -69,6 +91,22 @@ router.post("/api/auth/sync-user", async (req, res) => {
 // GET /api/auth/profile/:uid
 // Fetch user details from MongoDB with profile completion calculation
 router.get("/api/auth/profile/:uid", async (req, res) => {
+  if (req.dbUnavailable) {
+    const runtimeUser = getRuntimeUser(req.params.uid);
+
+    if (!runtimeUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const profileCompletion = calculateProfileCompletion(runtimeUser);
+
+    return res.status(200).json({
+      success: true,
+      data: { ...runtimeUser, profileCompletion },
+      fallback: true,
+    });
+  }
+
   try {
     const db = getDB();
     const users = db.collection("users");
@@ -135,6 +173,27 @@ function calculateProfileCompletion(user) {
 // PUT /api/auth/profile/:uid
 // Update user details in MongoDB
 router.put("/api/auth/profile/:uid", async (req, res) => {
+  if (req.dbUnavailable) {
+    const existing = getRuntimeUser(req.params.uid);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const { _id, firebaseUid, email, createdAt, isSkillVerified, verifiedSkills, ...allowedUpdates } = req.body;
+    const updated = upsertRuntimeUser({
+      ...existing,
+      ...allowedUpdates,
+      updatedAt: new Date(),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: updated,
+      fallback: true,
+    });
+  }
+
   try {
     const db = getDB();
     const users = db.collection("users");
@@ -149,7 +208,7 @@ router.put("/api/auth/profile/:uid", async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    if (allowedUpdates.skills && Array.isArray(allowedUpdates.skills)) {
+    if (allowedUpdates.skills && Array.isArray(allowedUpdates.skills) && !user.isSkillVerified) {
       const currentVerifiedSkills = user.verifiedSkills || [];
       const unverified = allowedUpdates.skills.filter(s => !currentVerifiedSkills.includes(s));
       
@@ -173,4 +232,3 @@ router.put("/api/auth/profile/:uid", async (req, res) => {
 });
 
 export default router;
-

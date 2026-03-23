@@ -4,10 +4,22 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
+import { mockCompanies } from "../data/mockData.js";
+import { followRuntimeCompany } from "../services/runtimeStore.js";
 
 const router = express.Router();
 
 async function getAllCompaniesHandler(req, res) {
+  if (req.dbUnavailable) {
+    return res.status(200).json({
+      success: true,
+      count: mockCompanies.length,
+      data: mockCompanies,
+      fallback: true,
+      message: "Showing fallback companies while the database is unavailable.",
+    });
+  }
+
   try {
     // 1️⃣ Get database connection
     const db = getDB();
@@ -146,6 +158,25 @@ router.delete("/api/companies/:id", deleteCompanyHandler);
 // POST: Follow a Company
 // ===============================
 router.post("/api/v1/companies/:id/follow", async (req, res) => {
+  if (req.dbUnavailable) {
+    const { uid, email } = req.body;
+
+    if (!uid || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "uid and email are required",
+      });
+    }
+
+    followRuntimeCompany(uid, req.params.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Company followed successfully",
+      fallback: true,
+    });
+  }
+
   try {
     const db = getDB();
     const { id } = req.params;

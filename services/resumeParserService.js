@@ -6,12 +6,6 @@ import path from "path";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-const pdfParseImport = require("pdf-parse");
-const pdfParse =
-  pdfParseImport && pdfParseImport.default
-    ? pdfParseImport.default
-    : pdfParseImport;
-const mammoth = require("mammoth");
 
 function resolveMimeType(file) {
   const mimeType = String(file?.mimetype || "").toLowerCase();
@@ -94,14 +88,51 @@ async function extractTextFromResume(file) {
     let extractedText = "";
 
     if (mimeType === "application/pdf") {
-      extractedText = await extractPdfText(buffer);
+      try {
+        const pdfParseModule = require("pdf-parse");
+        const PDFParseClass = pdfParseModule?.PDFParse;
+        const pdfParseFn =
+          typeof pdfParseModule === "function" ? pdfParseModule : null;
+
+        if (pdfParseFn) {
+          const data = await pdfParseFn(buffer);
+          extractedText = data?.text || "";
+        } else if (typeof PDFParseClass === "function") {
+          const parser = new PDFParseClass({ data: buffer });
+          try {
+            const data = await parser.getText();
+            extractedText = data?.text || "";
+          } finally {
+            if (typeof parser.destroy === "function") {
+              await parser.destroy();
+            }
+          }
+        } else {
+          throw new Error("pdf-parse export is unsupported in current runtime");
+        }
+      } catch (err) {
+        console.error(
+          "pdf-parse failed to load or run:",
+          err && err.message ? err.message : err,
+        );
+        throw new Error("PDF parsing is unavailable in this environment");
+      }
     } else if (
       mimeType ===
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       mimeType === "application/msword"
     ) {
-      const result = await mammoth.extractRawText({ buffer });
-      extractedText = result.value;
+      try {
+        const mammoth = require("mammoth");
+        const result = await mammoth.extractRawText({ buffer });
+        extractedText = result.value;
+      } catch (err) {
+        console.error(
+          "mammoth failed to load or run:",
+          err && err.message ? err.message : err,
+        );
+        throw new Error("DOCX parsing is unavailable in this environment");
+      }
     } else if (mimeType === "text/plain") {
       extractedText = buffer.toString("utf8");
     } else {
@@ -121,7 +152,7 @@ async function extractTextFromResume(file) {
     return extractedText;
   } catch (error) {
     console.error("Error parsing resume:", error);
-    throw new Error(error?.message || "Failed to parse resume file");
+    throw new Error(`Failed to parse resume file: ${error.message}`);
   }
 }
 

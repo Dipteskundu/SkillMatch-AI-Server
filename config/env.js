@@ -54,13 +54,11 @@ export function loadEnv() {
     env: {
       MONGODB_URI,
       MONGO_DB_NAME:
-        cleanEnvValue(process.env.MONGO_DB_NAME) ||
-        cleanEnvValue(process.env.DB_NAME) ||
-        "skillmatchai",
-      NODE_ENV: cleanEnvValue(process.env.NODE_ENV) || "development",
-      CORS_ORIGIN: cleanEnvValue(process.env.CORS_ORIGIN) || "",
-      PORT: cleanEnvValue(process.env.PORT) || "5000",
-      GEMINI_API_KEY: cleanEnvValue(process.env.GEMINI_API_KEY) || "",
+        process.env.MONGO_DB_NAME || process.env.DB_NAME || "skillmatchai",
+      NODE_ENV: process.env.NODE_ENV || "development",
+      CORS_ORIGIN: process.env.CORS_ORIGIN || "",
+      PORT: process.env.PORT || "5000",
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
     },
     errors,
     warnings,

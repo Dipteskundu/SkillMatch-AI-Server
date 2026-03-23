@@ -114,13 +114,8 @@ const submitTest = async (req, res) => {
           verifiedSkills.push(ts);
         }
       });
-      
-      const allSkills = Array.isArray(user.skills) ? user.skills : [];
-      // Check if all declared skills are now verified
-      const unverified = allSkills.filter(s => !verifiedSkills.includes(s));
-      if (unverified.length === 0 && verifiedSkills.length > 0) {
-        isSkillVerified = true;
-      }
+      // One-time unlock: once candidate passes a skill test, mark skill verification as complete.
+      isSkillVerified = true;
 
       updateFields = {
         verifiedSkills,
