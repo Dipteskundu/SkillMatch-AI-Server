@@ -1,0 +1,52 @@
+[
+  {
+    "category": "platform_help",
+    "topic": "Profile Creation",
+    "content": "To create your profile, navigate to the Profile page from the dashboard or top menu. Fill in your personal details, experience, skills, and upload a resume. Complete profiles get 3x more visibility."
+  },
+  {
+    "category": "platform_help",
+    "topic": "Resume Upload",
+    "content": "You can upload your resume on the Resume page. The system will automatically parse your resume to extract skills and suggest a learning path based on your resume data."
+  },
+  {
+    "category": "platform_help",
+    "topic": "Job Application",
+    "content": "To apply for a job, go to the Jobs page, browse the available roles, click on a job to view details, and click the 'Apply' button. Your profile and resume will be sent to the recruiter."
+  },
+  {
+    "category": "platform_help",
+    "topic": "Saved Jobs",
+    "content": "You can save jobs that interest you by clicking the 'Save Job' icon on the job listing. You can view all your saved jobs in the Saved Jobs section under your Dashboard."
+  },
+  {
+    "category": "platform_help",
+    "topic": "Recruiter Features",
+    "content": "Recruiters can use the Dashboard to post new jobs, manage existing job listings, review applicants, and communicate with candidates. The 'My Jobs' section provides an overview of all active postings."
+  },
+  {
+    "category": "candidate_workflow_help",
+    "topic": "Candidate Next Steps",
+    "content": "After signing up, you should completely fill out your profile and verify your skills via the Skill Test page to improve your match score. Once your profile is complete, start browsing jobs or check the Skill Gap Detection tool to identify what you should learn next."
+  },
+  {
+    "category": "recruiter_workflow_help",
+    "topic": "Reviewing Applicants",
+    "content": "To review applicants, go to your Dashboard, select a job you posted, and click to view candidates. You can see their match score, skills, and resume. You can move candidates through stages (Shortlisted, Interview, Rejected, Hired)."
+  },
+  {
+    "category": "learning_guidance",
+    "topic": "Learning Plan",
+    "content": "Your learning plan is generated based on the gap between your current skills and the skills required for the jobs you're interested in. You can access tailored learning suggestions in the Skill Gap Detection section."
+  },
+  {
+    "category": "job_matching_explanation",
+    "topic": "Job Match Score",
+    "content": "Your Match Score is calculated by comparing your profile skills and experience against the requirements of a specific job posting. A score of 70% or higher is considered a strong fit."
+  },
+  {
+    "category": "dashboard_navigation_help",
+    "topic": "Navigation",
+    "content": "Use the main navigation bar to access the Dashboard, Profile, finding Jobs, Resume analysis, Companies list, and Skill Gap tools. Recruiters will have access to specific Applicant and Job Posting sections."
+  }
+]

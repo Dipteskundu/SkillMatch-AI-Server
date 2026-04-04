@@ -4,6 +4,24 @@ import { getDB } from "../config/db.js";
 import { extractTextFromResume } from "../services/resumeParserService.js";
 import { extractSkillsFromResume } from "../services/aiSkillExtractionService.js";
 
+function extractFallbackFromText(text) {
+  const source = String(text || "");
+  const lower = source.toLowerCase();
+  const knownTech = [
+    "JavaScript", "TypeScript", "React", "Next.js", "Node.js", "Express", "MongoDB",
+    "PostgreSQL", "MySQL", "Firebase", "Python", "Java", "C++", "C", "Tailwind CSS",
+    "Docker", "Kubernetes", "AWS", "Azure", "GCP", "Git", "Redux", "HTML", "CSS",
+  ];
+  const technologies = knownTech.filter((t) => lower.includes(t.toLowerCase()));
+
+  return {
+    skills: technologies,
+    experience_years: 0,
+    technologies,
+    role_titles: [],
+  };
+}
+
 /**
  * Handle resume upload, parsing, AI extraction, and DB updates.
  */
@@ -22,8 +40,16 @@ async function uploadResume(req, res) {
     // 1. Extract raw text from the file
     const extractedText = await extractTextFromResume(file);
 
-    // 2. Perform AI skill extraction
-    const extractedData = await extractSkillsFromResume(extractedText);
+    // 2. Perform AI skill extraction (fallback safely if AI is unavailable)
+    let extractedData;
+    let warning = "";
+    try {
+      extractedData = await extractSkillsFromResume(extractedText);
+    } catch (aiError) {
+      console.error("AI extraction failed, using fallback extraction:", aiError);
+      extractedData = extractFallbackFromText(extractedText);
+      warning = "AI extraction was unavailable, so basic keyword extraction was used.";
+    }
 
     const db = getDB();
     const resumesCollection = db.collection("resumes");
@@ -76,6 +102,7 @@ async function uploadResume(req, res) {
     res.status(200).json({
       success: true,
       message: "Resume processed successfully",
+      warning: warning || undefined,
       data: {
         skills: extractedData.skills,
         technologies: extractedData.technologies,

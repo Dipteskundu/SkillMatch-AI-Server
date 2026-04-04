@@ -68,7 +68,7 @@ async function startCommVerification(req, res) {
     }
 
     // Generate communication questions via Gemini
-    const { questions, timeLimit } = await generateQuestions("Software Developer", "SkillMatch AI");
+    const { questions, timeLimit } = await generateQuestions("Software Developer", "JobMatch AI");
 
     const doc = {
       candidateId,

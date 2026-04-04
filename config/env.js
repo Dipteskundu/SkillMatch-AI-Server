@@ -32,7 +32,7 @@ export function loadEnv() {
 
   if (!MONGODB_URI) {
     errors.push(
-      "Missing MongoDB connection string. Set MONGODB_URI (preferred) or MONGO_URI, or DB_USER/DB_PASS/DB_HOST."
+      "Missing MongoDB connection string. Set MONGODB_URI (preferred) or MONGO_URI, or DB_USER/DB_PASS/DB_HOST.",
     );
   }
 
@@ -46,14 +46,57 @@ export function loadEnv() {
     warnings.push("DB_USER/DB_PASS set but DB_HOST is missing.");
   }
 
+  // Firebase Admin (optional). Used for verifying Firebase ID tokens and RTDB notifications.
+  // Prefer FIREBASE_SERVICE_ACCOUNT_JSON in serverless (Vercel) environments.
+  const FIREBASE_SERVICE_ACCOUNT_JSON =
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
+    process.env.FIREBASE_ADMIN_SDK_JSON ||
+    "";
+
+  const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "";
+  const FIREBASE_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL || "";
+  const FIREBASE_PRIVATE_KEY = process.env.FIREBASE_PRIVATE_KEY || "";
+  const FIREBASE_DATABASE_URL = process.env.FIREBASE_DATABASE_URL || "";
+
+  const hasFirebasePieces =
+    Boolean(FIREBASE_PROJECT_ID) &&
+    Boolean(FIREBASE_CLIENT_EMAIL) &&
+    Boolean(FIREBASE_PRIVATE_KEY);
+
+  if (FIREBASE_SERVICE_ACCOUNT_JSON && hasFirebasePieces) {
+    warnings.push(
+      "Both FIREBASE_SERVICE_ACCOUNT_JSON and FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY are set. FIREBASE_SERVICE_ACCOUNT_JSON will be used.",
+    );
+  }
+
+  // Only flag errors when some firebase vars are present but incomplete (avoid noisy errors by default).
+  const anyFirebaseVars =
+    Boolean(FIREBASE_SERVICE_ACCOUNT_JSON) ||
+    Boolean(FIREBASE_PROJECT_ID) ||
+    Boolean(FIREBASE_CLIENT_EMAIL) ||
+    Boolean(FIREBASE_PRIVATE_KEY) ||
+    Boolean(FIREBASE_DATABASE_URL);
+
+  if (anyFirebaseVars && !FIREBASE_SERVICE_ACCOUNT_JSON && !hasFirebasePieces) {
+    firebaseErrors.push(
+      "Firebase Admin config incomplete. Set FIREBASE_SERVICE_ACCOUNT_JSON (recommended) or FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY.",
+    );
+  }
+
   return {
     env: {
       MONGODB_URI,
-      MONGO_DB_NAME: process.env.MONGO_DB_NAME || process.env.DB_NAME || "skillmatchai",
+      MONGO_DB_NAME:
+        process.env.MONGO_DB_NAME || process.env.DB_NAME || "skillmatchai",
       NODE_ENV: process.env.NODE_ENV || "development",
       CORS_ORIGIN: process.env.CORS_ORIGIN || "",
       PORT: process.env.PORT || "5000",
       GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
+      FIREBASE_SERVICE_ACCOUNT_JSON,
+      FIREBASE_PROJECT_ID,
+      FIREBASE_CLIENT_EMAIL,
+      FIREBASE_PRIVATE_KEY,
+      FIREBASE_DATABASE_URL,
     },
     errors,
     warnings,

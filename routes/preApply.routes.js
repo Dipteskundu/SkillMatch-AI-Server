@@ -27,10 +27,17 @@ router.post("/api/jobs/:jobId/pre-apply-check", async (req, res) => {
     }
 
     // Candidates must have at least one skill to be verified
-    const hasDeclaredSkills = Array.isArray(candidate.skills) && candidate.skills.length > 0;
+    const candidateSkills = Array.isArray(candidate.skills) ? candidate.skills : [];
+    const verifiedSkills = Array.isArray(candidate.verifiedSkills) ? candidate.verifiedSkills : [];
+    const hasDeclaredSkills = candidateSkills.length > 0;
+    const derivedSkillVerified =
+      hasDeclaredSkills &&
+      candidateSkills.every((skill) => verifiedSkills.includes(skill)) &&
+      verifiedSkills.length > 0;
+    const effectiveSkillVerified = Boolean(candidate.isSkillVerified) || derivedSkillVerified;
 
     // --- Step 1: Skill Verification ---
-    if (!hasDeclaredSkills || !candidate.isSkillVerified) {
+    if (!hasDeclaredSkills || !effectiveSkillVerified) {
       return res.status(200).json({
         success: true,
         allowed: false,

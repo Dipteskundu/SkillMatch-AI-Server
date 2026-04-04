@@ -16,6 +16,11 @@ import resumeRoutes from "../routes/resume.routes.js";
 import skillGapRoutes from "../routes/skillGapRoutes.js";
 import preApplyRoutes from "../routes/preApply.routes.js";
 import commVerificationRoutes from "../routes/commVerification.routes.js";
+import applicationsRoutes from "../routes/applications.routes.js";
+import interviewsRoutes from "../routes/interviews.routes.js";
+import notificationsRoutes from "../routes/notifications.routes.js";
+import chatbotRoutes from "../routes/chatbot.routes.js";
+import tasksRoutes from "../routes/tasks.routes.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -30,20 +35,24 @@ if (firebaseErrors.length) {
   firebaseErrors.forEach((msg) => console.warn(`ENV FIREBASE: ${msg}`));
 }
 if (errors.length) {
-  errors.forEach((msg) => console.error(`ENV ERROR: ${msg}`));
+  errors.forEach((msg) =>
+    (isProd ? console.error : console.warn)(`ENV ERROR: ${msg}`),
+  );
 }
 
 const hasFatalEnv = errors.length > 0;
 
 const corsOrigins = env.CORS_ORIGIN
-  ? env.CORS_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean)
+  ? env.CORS_ORIGIN.split(",")
+      .map((o) => o.trim())
+      .filter(Boolean)
   : null;
 
 app.use(
   cors({
     origin: corsOrigins || "*",
     credentials: false,
-  })
+  }),
 );
 
 app.use(express.json({ limit: "2mb" }));
@@ -96,6 +105,11 @@ app.use(resumeRoutes);
 app.use(skillGapRoutes);
 app.use(preApplyRoutes);
 app.use(commVerificationRoutes);
+app.use(applicationsRoutes);
+app.use(interviewsRoutes);
+app.use(notificationsRoutes);
+app.use(chatbotRoutes);
+app.use(tasksRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

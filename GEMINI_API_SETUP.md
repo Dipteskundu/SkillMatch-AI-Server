@@ -1,107 +1,131 @@
-# Gemini API Setup Guide
+# Gemini API Setup & Integration Guide
 
-This document explains how the Gemini API is integrated into the backend following the official Google documentation.
+This document is the single source of truth for configuring, testing, and using the Gemini API integration in `JobMatch-AI-Server/`.
 
-## Overview
+Official docs (Node.js quickstart): https://ai.google.dev/gemini-api/docs/get-started/node
 
-The backend uses the official `@google/generative-ai` SDK to integrate Google's Gemini AI models for communication assessment features.
+## Implementation Status
 
-**Official Documentation:** https://ai.google.dev/gemini-api/docs/get-started/node
+- Status: Complete and working (Gemini API integrated via the official SDK)
+- Primary use case: Communication assessment (question generation + answer evaluation)
+
+## What's Included (Files/Scripts)
+
+Core integration:
+- `services/gemini.service.js` - main Gemini service (question generation + evaluation)
+- `package.json` - includes `@google/generative-ai`
+- `.env` - contains `GEMINI_API_KEY` (kept out of git)
+
+Verification scripts:
+- `test-gemini.js` - quick API connection test
+- `test-service.js` - tests service functions end-to-end
+- `list-models.js` - prints models available to your API key
+
+## Prerequisites
+
+- Node.js 20.x (see `package.json`)
+- A Gemini API key from Google AI Studio
 
 ## Installation
 
-The SDK is already installed via npm:
+If you cloned fresh (dependency already declared in `package.json`):
 
 ```bash
-npm install @google/generative-ai
+cd JobMatch-AI-Server
+npm install
 ```
 
 ## Configuration
 
-### 1. Get Your API Key
+### 1) Get an API key
 
-1. Visit [Google AI Studio](https://ai.google.dev/)
-2. Sign in with your Google account
-3. Click "Get API Key"
-4. Create a new API key or use an existing one
+1. Go to https://ai.google.dev/
+2. Sign in
+3. Create / copy an API key
 
-### 2. Set Environment Variable
+### 2) Add `GEMINI_API_KEY` to `.env`
 
-Add your API key to the `.env` file in the backend directory:
+In `JobMatch-AI-Server/.env`:
 
 ```env
 GEMINI_API_KEY=your_api_key_here
 ```
 
-**Security Note:** Never commit your API key to version control. The `.env` file is already in `.gitignore`.
+Security note: never commit API keys; `.env` is already in `.gitignore`.
 
-## Available Models
+## Quick Start (Recommended)
 
-Your API key has access to the following models (as of March 2026):
+Run these commands from `JobMatch-AI-Server/`:
 
-### Recommended Models:
-- `gemini-2.5-flash` - Latest stable Flash model (recommended for most use cases)
-- `gemini-flash-latest` - Alias for the latest Flash model
-- `gemini-2.0-flash` - Gemini 2.0 Flash
-- `gemini-2.5-pro` - Latest stable Pro model (more capable, slower)
-- `gemini-pro-latest` - Alias for the latest Pro model
-
-### To List All Available Models:
-
-```bash
-node list-models.js
-```
-
-## Testing the API
-
-### Quick Test
-
-Run the test script to verify your API connection:
+### 1) Test API connection
 
 ```bash
 node test-gemini.js
 ```
 
-Expected output:
+Expected (example) output:
 ```
-✨ Gemini API is working perfectly!
+Gemini API is working perfectly!
 ```
 
-## Implementation Details
+### 2) Test the service functions
 
-### Service File: `services/gemini.service.js`
+```bash
+node test-service.js
+```
 
-The service implements two main functions:
+This validates:
+- Question generation for job roles
+- Answer evaluation with scoring + feedback
 
-#### 1. `generateQuestions(jobTitle, company)`
+### 3) List models available to your key
 
-Generates communication assessment questions for a specific job role.
+```bash
+node list-models.js
+```
 
-**Parameters:**
-- `jobTitle` (string): Job title (e.g., "Frontend Developer")
-- `company` (string): Company name
+## Models & Fallback Strategy
 
-**Returns:**
-```javascript
+The service uses a model-priority list and falls back automatically if a model is unavailable or rate-limited.
+
+Model priority (in order):
+1. `gemini-2.5-flash` (recommended default)
+2. `gemini-flash-latest`
+3. `gemini-2.0-flash`
+4. `gemini-2.0-flash-001`
+5. `gemini-2.5-pro`
+6. `gemini-pro-latest`
+7. `gemini-2.0-flash-lite`
+8. `gemini-2.0-flash-lite-001`
+
+Notes:
+- Actual model availability varies by API key, region, and Google changes over time.
+- If quota is exceeded on one model, the service attempts the next model automatically.
+
+## Service API (Implementation Details)
+
+Service file: `services/gemini.service.js`
+
+### `generateQuestions(jobTitle, company)`
+
+Generates exactly 5 role-specific communication assessment questions, plus a 10-minute time limit.
+
+Returns:
+```js
 {
   questions: [
-    { id: "q1", text: "Question text...", type: "email" },
-    // ... more questions
+    { id: "q1", text: "Question text...", type: "email" }
   ],
-  timeLimit: 10 // minutes
+  timeLimit: 10
 }
 ```
 
-#### 2. `evaluateAnswers(questions, answers)`
+### `evaluateAnswers(questions, answers)`
 
-Evaluates candidate responses and provides scores and feedback.
+Evaluates candidate responses across all questions and returns scores + short feedback.
 
-**Parameters:**
-- `questions` (array): Array of question objects
-- `answers` (array): Array of answer objects with `questionId` and `answer`
-
-**Returns:**
-```javascript
+Returns:
+```js
 {
   clarityScore: 85,
   toneScore: 90,
@@ -112,88 +136,71 @@ Evaluates candidate responses and provides scores and feedback.
 }
 ```
 
-### Features
+### Features implemented
 
-1. **Model Fallback**: Automatically tries multiple models if one fails
-2. **Retry Logic**: Handles quota exceeded errors with automatic retry
-3. **Error Handling**: Comprehensive error handling for network issues, API errors, etc.
-4. **JSON Parsing**: Handles both plain JSON and markdown-wrapped JSON responses
+- Model fallback across multiple models
+- Retry logic for quota/rate limiting
+- Robust error handling with actionable messages
+- JSON parsing that tolerates markdown-wrapped JSON
+
+## Usage in the Application
+
+This project uses ESM (`"type": "module"`). Example import:
+
+```js
+import { generateQuestions, evaluateAnswers } from "../services/gemini.service.js";
+
+const result = await generateQuestions("Software Engineer", "Tech Corp");
+const scores = await evaluateAnswers(result.questions, candidateAnswers);
+```
+
+## Security
+
+- API key is read from environment variables only (`GEMINI_API_KEY`)
+- Server-side integration only (do not expose keys in client code)
+
+## Performance (Typical)
+
+Exact times vary by model and quota, but expected ballpark:
+- Question generation: ~2-3 seconds
+- Answer evaluation: ~3-4 seconds
 
 ## Rate Limits
 
-The Gemini API has rate limits based on your plan:
+Rate limits depend on your plan (free vs paid):
+- Docs: https://ai.google.dev/gemini-api/docs/rate-limits
 
-- **Free Tier**: Limited requests per minute/day
-- **Paid Tier**: Higher limits based on your plan
-
-**Rate Limit Documentation:** https://ai.google.dev/gemini-api/docs/rate-limits
-
-### Handling Quota Exceeded
-
-If you see "quota exceeded" errors:
-
-1. Wait a few minutes (free tier resets periodically)
-2. Check your usage at https://ai.google.dev/
-3. Consider upgrading your plan for higher limits
-4. The service automatically tries alternative models when one hits quota
-
-## API Usage in Controllers
-
-Example usage in `controllers/communication.controller.js`:
-
-```javascript
-const { generateQuestions, evaluateAnswers } = require('../services/gemini.service');
-
-// Generate questions
-const result = await generateQuestions("Software Engineer", "Tech Corp");
-
-// Evaluate answers
-const scores = await evaluateAnswers(questions, candidateAnswers);
-```
+If you hit "quota exceeded" / HTTP 429:
+1. Wait and retry (free tier resets periodically)
+2. Check usage: https://ai.google.dev/
+3. Consider upgrading for higher limits
+4. The service will try alternative models automatically
 
 ## Troubleshooting
 
-### Error: "GEMINI_API_KEY not set"
+### `GEMINI_API_KEY not set`
 
-**Solution:** Add your API key to the `.env` file
+- Ensure `JobMatch-AI-Server/.env` contains `GEMINI_API_KEY=...`
 
-### Error: "404 Not Found" or "Model not available"
+### 404 / model not found
 
-**Solution:** The model name might be incorrect. Run `node list-models.js` to see available models.
+- Run `node list-models.js` and update the model list if needed
 
-### Error: "429 Quota exceeded"
+### 429 quota exceeded
 
-**Solution:** 
-- Wait a few minutes (free tier limits)
-- Check your usage at https://ai.google.dev/
-- The service will automatically try alternative models
+- Wait a few minutes and retry
+- Check usage/limits in Google AI Studio
 
-### Error: "Invalid API key"
+### Invalid API key
 
-**Solution:**
-- Verify your API key is correct
-- Ensure there are no extra spaces or characters
-- Generate a new API key if needed
-
-## Best Practices
-
-1. **Keep API Key Secret**: Never expose your API key in client-side code
-2. **Monitor Usage**: Regularly check your API usage to avoid unexpected quota limits
-3. **Handle Errors**: Always implement proper error handling in your application
-4. **Use Appropriate Models**: Use Flash models for speed, Pro models for complex tasks
-5. **Cache Results**: Consider caching AI responses when appropriate to reduce API calls
+- Re-check for extra spaces/characters
+- Regenerate a key if needed
 
 ## Additional Resources
 
-- [Official Documentation](https://ai.google.dev/gemini-api/docs)
-- [Node.js Quickstart](https://ai.google.dev/gemini-api/docs/get-started/node)
-- [Model Documentation](https://ai.google.dev/gemini-api/docs/models/gemini)
-- [Rate Limits](https://ai.google.dev/gemini-api/docs/rate-limits)
-- [API Reference](https://ai.google.dev/api)
+- Official docs: https://ai.google.dev/gemini-api/docs
+- Model docs: https://ai.google.dev/gemini-api/docs/models/gemini
+- API reference: https://ai.google.dev/api
+- Google AI Forum: https://discuss.ai.google.dev/
+- SDK repo: https://github.com/google-gemini/generative-ai-js
 
-## Support
-
-For issues with the Gemini API:
-- Visit the [Google AI Forum](https://discuss.ai.google.dev/)
-- Check the [official documentation](https://ai.google.dev/)
-- Review the [GitHub repository](https://github.com/google-gemini/generative-ai-js)
