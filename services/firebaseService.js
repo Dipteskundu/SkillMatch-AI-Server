@@ -82,7 +82,9 @@ export function getFirebaseService() {
     const databaseURL =
       env.FIREBASE_DATABASE_URL ||
       (serviceAccount.project_id
-        ? `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`
+        ? (serviceAccount.project_id.includes("-") 
+            ? `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`
+            : `https://${serviceAccount.project_id}.firebaseio.com`)
         : undefined);
 
     if (!admin.apps.length) {

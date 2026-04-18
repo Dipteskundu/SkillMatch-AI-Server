@@ -1,6 +1,6 @@
 # Gemini API Setup & Integration Guide
 
-This document is the single source of truth for configuring, testing, and using the Gemini API integration in `JobMatch-AI-Server/`.
+This document is the single source of truth for configuring, testing, and using the Gemini API integration in `SkillMatch-AI-Server/`.
 
 Official docs (Node.js quickstart): https://ai.google.dev/gemini-api/docs/get-started/node
 
@@ -31,7 +31,7 @@ Verification scripts:
 If you cloned fresh (dependency already declared in `package.json`):
 
 ```bash
-cd JobMatch-AI-Server
+cd SkillMatch-AI-Server
 npm install
 ```
 
@@ -45,7 +45,7 @@ npm install
 
 ### 2) Add `GEMINI_API_KEY` to `.env`
 
-In `JobMatch-AI-Server/.env`:
+In `SkillMatch-AI-Server/.env`:
 
 ```env
 GEMINI_API_KEY=your_api_key_here
@@ -55,7 +55,7 @@ Security note: never commit API keys; `.env` is already in `.gitignore`.
 
 ## Quick Start (Recommended)
 
-Run these commands from `JobMatch-AI-Server/`:
+Run these commands from `SkillMatch-AI-Server/`:
 
 ### 1) Test API connection
 
@@ -180,7 +180,7 @@ If you hit "quota exceeded" / HTTP 429:
 
 ### `GEMINI_API_KEY not set`
 
-- Ensure `JobMatch-AI-Server/.env` contains `GEMINI_API_KEY=...`
+- Ensure `SkillMatch-AI-Server/.env` contains `GEMINI_API_KEY=...`
 
 ### 404 / model not found
 

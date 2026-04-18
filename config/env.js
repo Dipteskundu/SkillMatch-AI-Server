@@ -85,7 +85,10 @@ export function loadEnv() {
     env: {
       MONGODB_URI,
       MONGO_DB_NAME:
-        process.env.MONGO_DB_NAME || process.env.DB_NAME || "skillmatchai",
+        process.env.MONGO_DB_NAME || 
+        process.env.DB_NAME || 
+        process.env.obMONGO_DB_NAME || 
+        "skillmatchai",
       NODE_ENV: process.env.NODE_ENV || "development",
       CORS_ORIGIN: process.env.CORS_ORIGIN || "",
       PORT: process.env.PORT || "5000",
