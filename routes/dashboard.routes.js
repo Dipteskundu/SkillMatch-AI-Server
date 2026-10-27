@@ -1,6 +1,16 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
+import { validate } from "../middleware/validate.js";
+import { verifyToken } from "../middleware/auth.js";
+import { requireAdmin } from "../middleware/recruiterGate.js";
+import {
+  adminUsersQuery,
+  applicationStatusBody,
+  escapeRegExp,
+  objectIdParamSchema,
+  userRoleEnum,
+} from "../lib/schemas.js";
 
 const router = express.Router();
 
@@ -129,16 +139,21 @@ router.get("/api/dashboard/recruiter/:uid", async (req, res) => {
         .length,
     };
 
-    // 6. Top Candidates with Communication Scores
+    // 6. Top Candidates ranked by the unified Hiring Fit Score (aiScore.total).
+    //    Legacy applications without aiScore fall back to communicationScore.
+    const aiTotal = (a) =>
+      typeof a?.aiScore?.total === "number" ? a.aiScore.total : -1;
     const topCandidates = applications
       .sort(
         (a, b) =>
+          aiTotal(b) - aiTotal(a) ||
           (b.communicationScore || 0) - (a.communicationScore || 0) ||
           b.createdAt - a.createdAt,
       )
       .slice(0, 10)
       .map((a) => ({
         ...a,
+        aiScore: a.aiScore ?? null,
         communicationScore: a.communicationScore ?? null,
         communicationStatus: a.communicationStatus ?? "pending",
       }));
@@ -163,7 +178,7 @@ router.get("/api/dashboard/recruiter/:uid", async (req, res) => {
 });
 
 // --- Admin Dashboard ---
-router.get("/api/dashboard/admin", async (req, res) => {
+router.get("/api/dashboard/admin", verifyToken, requireAdmin, async (req, res) => {
   try {
     const db = getDB();
 
@@ -176,12 +191,41 @@ router.get("/api/dashboard/admin", async (req, res) => {
       .collection("companies_info")
       .countDocuments();
 
-    // Mock growth data
-    const growth = [
-      { month: "Jan", users: 400, jobs: 240 },
-      { month: "Feb", users: 600, jobs: 350 },
-      { month: "Mar", users: 800, jobs: 480 },
-    ];
+    // Real monthly growth (last 6 months) computed from actual documents —
+    // never fabricated numbers. Docs without createdAt are simply excluded.
+    const now = new Date();
+    const since = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const monthKey = (d) => {
+      const dt = new Date(d);
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+    };
+    const growthBuckets = [];
+    for (let i = 5; i >= 0; i -= 1) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      growthBuckets.push({
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+        month: d.toLocaleString("en-US", { month: "short" }),
+        users: 0,
+        jobs: 0,
+      });
+    }
+    try {
+      const [newUsers, newJobs] = await Promise.all([
+        db.collection("users").find({ createdAt: { $gte: since } }, { projection: { createdAt: 1 } }).toArray(),
+        db.collection("find_jobs").find({ createdAt: { $gte: since } }, { projection: { createdAt: 1 } }).toArray(),
+      ]);
+      for (const u of newUsers) {
+        const b = growthBuckets.find((m) => m.key === monthKey(u.createdAt));
+        if (b) b.users += 1;
+      }
+      for (const j of newJobs) {
+        const b = growthBuckets.find((m) => m.key === monthKey(j.createdAt));
+        if (b) b.jobs += 1;
+      }
+    } catch {
+      /* zeros are honest */
+    }
+    const growth = growthBuckets.map(({ month, users, jobs }) => ({ month, users, jobs }));
 
     res.status(200).json({
       success: true,
@@ -222,7 +266,11 @@ router.get("/api/dashboard/admin", async (req, res) => {
 });
 
 // --- Application Status Update ---
-router.put("/api/applications/:id/status", async (req, res) => {
+router.put(
+  "/api/applications/:id/status",
+  validate(objectIdParamSchema, "params"),
+  validate(applicationStatusBody),
+  async (req, res) => {
   try {
     const db = getDB();
     const { id } = req.params;
@@ -270,7 +318,8 @@ router.put("/api/applications/:id/status", async (req, res) => {
     console.error("Status Update Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
-});
+  },
+);
 
 // --- Get Single Application ---
 router.get("/api/applications/:id", async (req, res) => {
@@ -305,6 +354,12 @@ router.get("/api/applications/:id", async (req, res) => {
         .updateOne({ _id: new ObjectId(id) }, updateDoc);
 
       application.status = "seen";
+      // Backward-compat: older writes stored timeline as a single object
+      // (the $set bug fixed in PUT /api/applications/:id/status). Coerce to
+      // an array before pushing so reads never crash on legacy documents.
+      if (!Array.isArray(application.timeline)) {
+        application.timeline = application.timeline ? [application.timeline] : [];
+      }
       application.timeline.push({ status: "seen", timestamp: new Date() });
 
       // Optional: send firestore notification to candidate...
@@ -318,29 +373,31 @@ router.get("/api/applications/:id", async (req, res) => {
 });
 
 // --- Admin: All Users ---
-router.get("/api/admin/users", async (req, res) => {
+router.get("/api/admin/users", verifyToken, requireAdmin, validate(adminUsersQuery, "query"), async (req, res) => {
   try {
     const db = getDB();
-    const { search = "", role = "", page = "1", limit = "20" } = req.query;
+    const { search = "", role = "", page = 1, limit = 20 } = req.query;
 
     const query = {};
     if (role) query.role = role;
     if (search) {
+      // Escape regex special characters to prevent regex injection / ReDoS.
+      const safeSearch = escapeRegExp(search);
       query.$or = [
-        { email: { $regex: search, $options: "i" } },
-        { displayName: { $regex: search, $options: "i" } },
+        { email: { $regex: safeSearch, $options: "i" } },
+        { displayName: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (page - 1) * limit;
     const [users, total] = await Promise.all([
       db.collection("users").find(query, {
         projection: { firebaseUid: 1, email: 1, displayName: 1, role: 1, photoURL: 1, createdAt: 1, isSkillVerified: 1, title: 1, location: 1 }
-      }).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).toArray(),
+      }).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray(),
       db.collection("users").countDocuments(query),
     ]);
 
-    res.status(200).json({ success: true, users, total, page: parseInt(page), limit: parseInt(limit) });
+    res.status(200).json({ success: true, users, total, page, limit });
   } catch (error) {
     console.error("Admin Users Error:", error);
     res.status(500).json({ success: false, message: "Server error" });

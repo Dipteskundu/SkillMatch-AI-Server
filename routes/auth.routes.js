@@ -3,12 +3,18 @@
 
 import express from "express";
 import { getDB } from "../config/db.js";
+import { validate } from "../middleware/validate.js";
+import { profileUpdateBody, syncUserBody, uidParamSchema } from "../lib/schemas.js";
+import { scheduleCandidateAiScoreRecompute } from "../services/fitScoreService.js";
 
 const router = express.Router();
 
 // POST /api/auth/sync-user
 // Called from frontend AFTER Firebase login/register succeeds.
-router.post("/api/auth/sync-user", async (req, res) => {
+// NOTE: `role` is accepted for backward compatibility but is ONLY honored on
+// the initial insert (default "candidate"); updates never overwrite role, so
+// a client cannot escalate an existing account to admin/recruiter.
+router.post("/api/auth/sync-user", validate(syncUserBody), async (req, res) => {
   try {
     const db = getDB();
     const users = db.collection("users");
@@ -22,18 +28,12 @@ router.post("/api/auth/sync-user", async (req, res) => {
       role,
     } = req.body;
 
-    if (!uid || !email) {
-      return res.status(400).json({
-        success: false,
-        message: "uid and email are required",
-      });
-    }
-
     const now = new Date();
 
     const update = {
       $setOnInsert: {
         createdAt: now,
+        role: role || "candidate",
       },
       $set: {
         firebaseUid: uid,
@@ -41,7 +41,6 @@ router.post("/api/auth/sync-user", async (req, res) => {
         displayName: displayName || "",
         provider: provider || "password",
         photoURL: photoURL || "",
-        role: role || "candidate",
         lastLoginAt: now,
       },
     };
@@ -68,7 +67,7 @@ router.post("/api/auth/sync-user", async (req, res) => {
 
 // GET /api/auth/profile/:uid
 // Fetch user details from MongoDB with profile completion calculation
-router.get("/api/auth/profile/:uid", async (req, res) => {
+router.get("/api/auth/profile/:uid", validate(uidParamSchema, "params"), async (req, res) => {
   try {
     const db = getDB();
     const users = db.collection("users");
@@ -133,16 +132,21 @@ function calculateProfileCompletion(user) {
 }
 
 // PUT /api/auth/profile/:uid
-// Update user details in MongoDB
-router.put("/api/auth/profile/:uid", async (req, res) => {
+// Update user details in MongoDB.
+// Fields are whitelisted via profileUpdateBody (lib/schemas.js): role,
+// verifiedSkills, isSkillVerified, firebaseUid, email, _id, createdAt etc.
+// can NEVER be set through this route (no mass assignment).
+router.put(
+  "/api/auth/profile/:uid",
+  validate(uidParamSchema, "params"),
+  validate(profileUpdateBody),
+  async (req, res) => {
   try {
     const db = getDB();
     const users = db.collection("users");
     const { uid } = req.params;
-    const updateData = req.body;
-
-    // Filter out restricted fields
-    const { _id, firebaseUid, email, createdAt, isSkillVerified, verifiedSkills, ...allowedUpdates } = updateData;
+    // req.body has been parsed+whitelisted by Zod (unknown keys stripped)
+    const allowedUpdates = { ...req.body };
 
     const user = await users.findOne({ firebaseUid: uid });
     if (!user) {
@@ -165,12 +169,20 @@ router.put("/api/auth/profile/:uid", async (req, res) => {
       { $set: { ...allowedUpdates, updatedAt: new Date() } }
     );
 
+    // Changing profile skills changes the skillMatch component of the Hiring
+    // Fit Score — refresh aiScore on the candidate's open applications
+    // (best-effort, fire-and-forget).
+    if (Array.isArray(allowedUpdates.skills)) {
+      scheduleCandidateAiScoreRecompute(uid);
+    }
+
     res.status(200).json({ success: true, message: "Profile updated successfully" });
   } catch (error) {
     console.error("UPDATE PROFILE ERROR:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
-});
+  },
+);
 
 export default router;
 

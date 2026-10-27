@@ -2,14 +2,27 @@ import { askChatbot } from "../services/chatbotService.js";
 import { getDB } from "../config/db.js";
 
 const MAX_HISTORY_MESSAGES = 100;
+const MAX_QUESTION_LENGTH = 2000;
 
-// POST /api/chatbot/ask
+// POST /api/chatbot/ask  — career agent (grounded answer + sources).
 export const handleAskChatbot = async (req, res) => {
   try {
-    const { prompt } = req.body;
+    // Contract field is `question`; `prompt` is accepted as a legacy alias.
+    const raw = typeof req.body?.question === "string"
+      ? req.body.question
+      : typeof req.body?.prompt === "string"
+        ? req.body.prompt
+        : "";
+    const question = raw.trim();
 
-    if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
-      return res.status(400).json({ success: false, message: "Prompt is required" });
+    if (!question) {
+      return res.status(400).json({ success: false, message: "Question is required" });
+    }
+    if (question.length > MAX_QUESTION_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `Question is too long (max ${MAX_QUESTION_LENGTH} characters)`,
+      });
     }
 
     const uid = req.user?.uid;
@@ -19,9 +32,11 @@ export const handleAskChatbot = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized. Token missing." });
     }
 
-    const { answer, link } = await askChatbot(uid, role, prompt.trim());
+    const { answer, sources, grounded, intent } = await askChatbot(uid, role, question);
 
-    // Persist to chat history (fire-and-forget — don't block the response)
+    // Persist to chat history (fire-and-forget — don't block the response).
+    // Bot messages carry optional analytics fields (sourcesCount / intent /
+    // grounded) — additive only, existing history docs stay valid.
     try {
       const db = getDB();
       const col = db.collection("chat_histories");
@@ -33,8 +48,15 @@ export const handleAskChatbot = async (req, res) => {
           $push: {
             messages: {
               $each: [
-                { sender: "user", text: prompt.trim(), createdAt: new Date() },
-                { sender: "bot",  text: answer,        createdAt: new Date() },
+                { sender: "user", text: question, createdAt: new Date() },
+                {
+                  sender: "bot",
+                  text: answer,
+                  createdAt: new Date(),
+                  sourcesCount: Array.isArray(sources) ? sources.length : 0,
+                  intent: intent || null,
+                  grounded: Boolean(grounded),
+                },
               ],
               $slice: -MAX_HISTORY_MESSAGES, // keep last 100 messages
             },
@@ -46,7 +68,15 @@ export const handleAskChatbot = async (req, res) => {
       console.error("Chat history save error (non-fatal):", histErr.message);
     }
 
-    return res.status(200).json({ success: true, assistant: answer, link });
+    return res.status(200).json({
+      success: true,
+      data: {
+        answer,
+        sources: Array.isArray(sources) ? sources : [],
+        grounded: Boolean(grounded),
+        intent,
+      },
+    });
   } catch (error) {
     console.error("Chatbot Controller Error:", error);
     return res.status(500).json({

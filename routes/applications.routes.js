@@ -5,12 +5,23 @@ import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
 import { getFirebaseService } from "../services/firebaseService.js";
+import { validate } from "../middleware/validate.js";
+import {
+  applicationRecalculateQuery,
+  applicationStatusBody,
+  objectIdParamSchema,
+  uidParamSchema,
+} from "../lib/schemas.js";
+import {
+  recomputeApplicationAiScore,
+  toApiAiScore,
+} from "../services/fitScoreService.js";
 
 const router = express.Router();
 
 // GET: Get Recruiter's Applications
 // =======================================
-router.get("/api/applications/recruiter/:uid", async (req, res) => {
+router.get("/api/applications/recruiter/:uid", validate(uidParamSchema, "params"), async (req, res) => {
   try {
     const db = getDB();
     const { uid } = req.params;
@@ -106,21 +117,21 @@ router.get("/api/applications/recruiter/:uid", async (req, res) => {
 
 // PUT: Update Application Status
 // =======================================
-router.put("/api/applications/:id/status", async (req, res) => {
+router.put(
+  "/api/applications/:id/status",
+  validate(objectIdParamSchema, "params"),
+  validate(applicationStatusBody),
+  async (req, res) => {
   try {
     const db = getDB();
     const { id } = req.params;
     const { status, feedback } = req.body;
 
-    // Validate ID
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid application ID format",
-      });
-    }
-
-    // Find and update application
+    // Find and update application.
+    // NOTE: timeline must be $push-ed, not $set-ted — the old code replaced
+    // the entire timeline array with a single object, which broke every
+    // subsequent timeline push/read. $push appends correctly, preserving the
+    // array shape that the rest of the codebase (and Mongoose schema) expects.
     const application = await db.collection("applications").findOneAndUpdate(
       { _id: new ObjectId(id) },
       {
@@ -128,6 +139,8 @@ router.put("/api/applications/:id/status", async (req, res) => {
           status,
           feedback: feedback || null,
           updatedAt: new Date(),
+        },
+        $push: {
           timeline: { status, timestamp: new Date() },
         },
       },
@@ -197,6 +210,70 @@ router.put("/api/applications/:id/status", async (req, res) => {
       message: "Server error while updating application status",
     });
   }
-});
+  },
+);
+
+// POST: Force Recalculate aiScore (Hiring Fit Score)
+// =======================================
+// Recruiter/admin only for now (real role gating lands with middleware/auth
+// Phase 2): the caller must be an admin, OR a recruiter who owns the job
+// (postedBy / company match — same ownership rule as GET /api/jobs/my-jobs).
+router.post(
+  "/api/applications/:id/recalculate",
+  validate(objectIdParamSchema, "params"),
+  validate(applicationRecalculateQuery, "query"),
+  async (req, res) => {
+  try {
+    const db = getDB();
+    const { id } = req.params;
+    const { uid } = req.query;
+
+    const application = await db
+      .collection("applications")
+      .findOne({ _id: new ObjectId(id) });
+    if (!application) {
+      return res.status(404).json({ success: false, message: "Application not found" });
+    }
+
+    const requester = await db.collection("users").findOne({ firebaseUid: uid });
+    if (!requester) {
+      return res.status(404).json({ success: false, message: "Requester not found" });
+    }
+
+    const ownsJob = async () => {
+      if (requester.role === "admin") return true;
+      if (requester.role !== "recruiter" && requester.role !== "employer") return false;
+      const job = await db.collection("find_jobs").findOne({ _id: application.jobId });
+      if (!job) return false;
+      return job.postedBy === uid ||
+        job.company === (requester.companyName || requester.displayName);
+    };
+
+    if (!(await ownsJob())) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Only the job's recruiter or an admin can recalculate scores.",
+      });
+    }
+
+    const score = await recomputeApplicationAiScore(application, db);
+    if (!score) {
+      return res.status(404).json({
+        success: false,
+        message: "Candidate or job for this application could not be found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "aiScore recalculated",
+      data: { aiScore: toApiAiScore(score) },
+    });
+  } catch (error) {
+    console.error("Recalculate aiScore Error:", error);
+    res.status(500).json({ success: false, message: "Server error while recalculating aiScore" });
+  }
+  },
+);
 
 export default router;

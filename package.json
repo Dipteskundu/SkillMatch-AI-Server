@@ -1,10 +1,15 @@
 {
-  "name": "simple-backend",
+  "name": "skillmatch-ai-server",
   "version": "1.0.0",
-  "description": "Beginner friendly Node.js/Express backend with MongoDB",
+  "description": "JobMatch AI / SkillMatch backend — Express + MongoDB (raw driver) + Mongoose schema layer",
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "dev": "node --watch index.js",
+    "check": "node --check index.js",
+    "test": "vitest run",
+    "eval": "node evals/run-evals.js",
+    "seed:learning": "node scripts/seed-learning.js",
     "build": "node -e \"console.log('No build step for JobMatch-AI-Server')\"",
     "start": "node index.js"
   },
@@ -12,14 +17,24 @@
     "node": "20.x"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
+    "@google/genai": "^2.30.0",
+    "@sentry/node": "^11.8.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "express-rate-limit": "^8.7.1",
     "firebase-admin": "^13.7.0",
+    "helmet": "^8.3.0",
     "mammoth": "^1.11.0",
     "mongodb": "^5.7.0",
+    "mongoose": "^9.11.2",
     "multer": "^2.1.1",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "stripe": "^23.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.1",
+    "vitest": "^5.0.5"
   }
 }

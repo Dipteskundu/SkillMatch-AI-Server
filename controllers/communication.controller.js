@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
 import { generateQuestions, evaluateAnswers } from "../services/gemini.service.js";
 import { STATUS, COLLECTION } from "../models/communicationTest.model.js";
+import { scheduleCandidateAiScoreRecompute } from "../services/fitScoreService.js";
 
 /**
  * POST /api/communication/start
@@ -179,6 +180,11 @@ async function submitTest(req, res) {
         },
       }
     );
+
+    // A new communication score feeds the assessment component of the Hiring
+    // Fit Score — refresh aiScore on the candidate's open applications
+    // (best-effort, fire-and-forget).
+    scheduleCandidateAiScoreRecompute(session.candidateId);
 
     res.status(200).json({
       success: true,

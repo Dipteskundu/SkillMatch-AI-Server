@@ -6,6 +6,15 @@ import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
 import { analyzeSkillGap } from "../services/skillGapService.js";
 import { getFirebaseService } from "../services/firebaseService.js";
+import { validate } from "../middleware/validate.js";
+import { verifyToken } from "../middleware/auth.js";
+import { requireAdmin } from "../middleware/recruiterGate.js";
+import { applyJobBody, createJobBody, objectIdParamSchema } from "../lib/schemas.js";
+import { loadSkillVocabulary } from "../services/skillNormalize.js";
+import {
+  computeFitForDocs,
+  toAiScoreSubdocument,
+} from "../services/fitScoreService.js";
 
 const router = express.Router();
 
@@ -37,11 +46,11 @@ router.get("/api/jobs", async (req, res) => {
 
 // POST: Create New Job
 // =======================================
-router.post("/api/jobs", async (req, res) => {
+router.post("/api/jobs", validate(createJobBody), async (req, res) => {
   try {
     const db = getDB();
 
-    // 1️⃣ Extract fields from body
+    // 1️⃣ Extract fields from body (already validated/whitelisted by Zod)
     const {
       title,
       company,
@@ -55,6 +64,8 @@ router.post("/api/jobs", async (req, res) => {
       postedBy,
       description,
       responsibilities,
+      requirements,
+      niceToHaveSkills,
       vacancies,
       deadline,
     } = req.body;
@@ -90,6 +101,8 @@ router.post("/api/jobs", async (req, res) => {
       postedBy: postedBy || null,
       description: description || "",
       responsibilities: responsibilities || [],
+      requirements: requirements || [],
+      niceToHaveSkills: niceToHaveSkills || [],
       vacancies: vacancies || null,
       deadline: deadline || null,
       status: "pending", // New jobs start as pending
@@ -118,42 +131,42 @@ router.post("/api/jobs", async (req, res) => {
     if (firebaseService) {
       setImmediate(async () => {
         try {
-          const requiredSkills = (newJob.skills || []).map((s) =>
-            s.toLowerCase().trim(),
-          );
-          if (requiredSkills.length > 0) {
-            const users = await db
-              .collection("users")
-              .find({ role: { $ne: "recruiter" } })
-              .toArray();
-            for (const candidate of users) {
-              const candidateSkills = (candidate.skills || []).map((s) =>
-                s.toLowerCase().trim(),
-              );
-              if (!candidateSkills.length) continue;
+          if (!(newJob.skills || []).length) return;
 
-              const matching = requiredSkills.filter((s) =>
-                candidateSkills.includes(s),
-              );
-              const fitScore = (matching.length / requiredSkills.length) * 100;
+          // One vocabulary load + pure in-memory scoring per candidate.
+          // Uses the SAME unified Hiring Fit Score as /fit, /apply and the
+          // dashboard (services/fitScore.js) — threshold stays 70.
+          const vocabulary = await loadSkillVocabulary();
 
-              if (fitScore >= 70 && candidate.firebaseUid) {
-                const notifObj = {
-                  userId: candidate.firebaseUid,
-                  type: "job_posted",
-                  jobId: result.insertedId,
-                  jobTitle: newJob.title,
-                  company: newJob.company,
-                  message: `New job match (${Math.round(fitScore)}% Fit): ${newJob.title} at ${newJob.company}`,
-                  read: false,
-                  createdAt: new Date(),
-                };
-                await db.collection("notifications").insertOne(notifObj);
-                await firebaseService.sendNotification(
-                  candidate.firebaseUid,
-                  notifObj,
-                );
-              }
+          const users = await db
+            .collection("users")
+            .find({ role: { $ne: "recruiter" } })
+            .toArray();
+          for (const candidate of users) {
+            if (!(candidate.skills || []).length) continue;
+
+            const fitScore = await computeFitForDocs({
+              user: candidate,
+              job: newJob,
+              vocabulary,
+            });
+
+            if (fitScore.total >= 70 && candidate.firebaseUid) {
+              const notifObj = {
+                userId: candidate.firebaseUid,
+                type: "job_posted",
+                jobId: result.insertedId,
+                jobTitle: newJob.title,
+                company: newJob.company,
+                message: `New job match (${fitScore.total}% Fit): ${newJob.title} at ${newJob.company}`,
+                read: false,
+                createdAt: new Date(),
+              };
+              await db.collection("notifications").insertOne(notifObj);
+              await firebaseService.sendNotification(
+                candidate.firebaseUid,
+                notifObj,
+              );
             }
           }
         } catch (err) {
@@ -262,27 +275,39 @@ router.delete("/api/jobs/:id", async (req, res) => {
 
 // POST: Apply to a Job
 // =======================================
-router.post("/api/jobs/:id/apply", async (req, res) => {
+router.post(
+  "/api/jobs/:id/apply",
+  validate(objectIdParamSchema, "params"),
+  validate(applyJobBody),
+  async (req, res) => {
   try {
     const db = getDB();
     const { id } = req.params;
     const { uid, email, jobTitle, company, location } = req.body;
 
-    if (!uid || !email) {
-      return res.status(400).json({
-        success: false,
-        message: "uid and email are required",
-      });
-    }
-
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid job ID format",
-      });
-    }
-
     const applications = db.collection("applications");
+
+    // Fetch job + candidate ONCE (used for aiScore + skill-gap below).
+    const jobDoc = await db
+      .collection("find_jobs")
+      .findOne({ _id: new ObjectId(id) });
+    const candidate = await db
+      .collection("users")
+      .findOne({ firebaseUid: uid });
+
+    // Unified Hiring Fit Score (services/fitScore.js) — computed with the
+    // candidate's real assessment/verification state at apply time.
+    let aiScore = null;
+    try {
+      const score = await computeFitForDocs({
+        user: candidate,
+        job: jobDoc,
+        assessment: { testScore: null, communicationScore: null },
+      });
+      aiScore = toAiScoreSubdocument(score);
+    } catch (scoreError) {
+      console.error("aiScore computation error:", scoreError);
+    }
 
     const application = {
       jobId: new ObjectId(id),
@@ -292,7 +317,7 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
       company: company || "",
       location: location || "",
       status: "submitted",
-      aiScore: null,
+      aiScore,
       timeline: [{ status: "submitted", timestamp: new Date() }],
       feedback: null,
       createdAt: new Date(),
@@ -302,14 +327,7 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
 
     // --- Skill Gap Detection Start ---
     try {
-      const jobDoc = await db
-        .collection("find_jobs")
-        .findOne({ _id: new ObjectId(id) });
       const jobSkills = jobDoc?.skills || [];
-
-      const candidate = await db
-        .collection("users")
-        .findOne({ firebaseUid: uid });
       const candidateSkills = candidate?.skills || [];
 
       const skillGapResult = await analyzeSkillGap(candidateSkills, jobSkills);
@@ -320,6 +338,7 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
         jobId: new ObjectId(id),
         matchedSkills: skillGapResult.matchedSkills,
         missingSkills: skillGapResult.missingSkills,
+        adjacentSkills: skillGapResult.adjacentSkills,
         matchScore: skillGapResult.matchScore,
         learningSuggestions: skillGapResult.learningSuggestions,
         createdAt: new Date(),
@@ -338,6 +357,7 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
     });
 
     // Notify recruiter & Update applicant count real-time in background
+    const firebaseService = getFirebaseService();
     if (firebaseService) {
       setImmediate(async () => {
         try {
@@ -396,7 +416,8 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
       message: "Server error while submitting application",
     });
   }
-});
+  },
+);
 
 // POST: Save Job
 // =======================================
@@ -608,7 +629,7 @@ router.get("/api/jobs/my-jobs/:uid", async (req, res) => {
 // === ADMIN ROUTES ===
 
 // GET: Current Pending Approval Jobs
-router.get("/api/admin/jobs/pending", async (req, res) => {
+router.get("/api/admin/jobs/pending", verifyToken, requireAdmin, async (req, res) => {
   try {
     const db = getDB();
     const jobs = await db
@@ -623,7 +644,7 @@ router.get("/api/admin/jobs/pending", async (req, res) => {
 });
 
 // GET: Current Approved Jobs
-router.get("/api/admin/jobs/approved", async (req, res) => {
+router.get("/api/admin/jobs/approved", verifyToken, requireAdmin, async (req, res) => {
   try {
     const db = getDB();
     const jobs = await db
@@ -639,7 +660,7 @@ router.get("/api/admin/jobs/approved", async (req, res) => {
 });
 
 // GET: Current Delete Requests
-router.get("/api/admin/jobs/delete-requests", async (req, res) => {
+router.get("/api/admin/jobs/delete-requests", verifyToken, requireAdmin, async (req, res) => {
   try {
     const db = getDB();
     const jobs = await db
@@ -654,7 +675,7 @@ router.get("/api/admin/jobs/delete-requests", async (req, res) => {
 });
 
 // PUT: Approve Job Post
-router.put("/api/admin/jobs/:id/approve", async (req, res) => {
+router.put("/api/admin/jobs/:id/approve", verifyToken, requireAdmin, async (req, res) => {
   try {
     const db = getDB();
     const { id } = req.params;
@@ -678,7 +699,7 @@ router.put("/api/admin/jobs/:id/approve", async (req, res) => {
 });
 
 // PUT: Reject Job Post
-router.put("/api/admin/jobs/:id/reject", async (req, res) => {
+router.put("/api/admin/jobs/:id/reject", verifyToken, requireAdmin, async (req, res) => {
   try {
     const db = getDB();
     const { id } = req.params;
@@ -702,7 +723,7 @@ router.put("/api/admin/jobs/:id/reject", async (req, res) => {
 });
 
 // DELETE: Permanently Delete Job (Admin only)
-router.delete("/api/admin/jobs/:id", async (req, res) => {
+router.delete("/api/admin/jobs/:id", verifyToken, requireAdmin, async (req, res) => {
   try {
     const db = getDB();
     const { id } = req.params;

@@ -5,7 +5,8 @@
 
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
-import { generateQuestions, evaluateAnswers } from "../services/gemini.service.js";
+import { generateQuestions, evaluateAnswers, TIME_LIMIT_MINUTES } from "../services/gemini.service.js";
+import { scheduleCandidateAiScoreRecompute } from "../services/fitScoreService.js";
 
 const COMM_VER_COLLECTION = "communication_verifications";
 const PASS_THRESHOLD = 60; // minimum score to pass
@@ -63,7 +64,9 @@ async function startCommVerification(req, res) {
         success: true,
         sessionId: inProgress._id.toString(),
         questions: inProgress.questions,
-        timeLimit: 12,
+        // Same limit as the fresh-start branch below (was a hardcoded 12 →
+        // displayed 12 while grading used 10 minutes).
+        timeLimit: inProgress.timeLimit || TIME_LIMIT_MINUTES,
       });
     }
 
@@ -77,6 +80,7 @@ async function startCommVerification(req, res) {
       score: null,
       feedback: null,
       status: "in_progress",
+      timeLimit,
       createdAt: new Date(),
       completedAt: null,
     };
@@ -160,6 +164,12 @@ async function submitCommVerification(req, res) {
       { firebaseUid: session.candidateId },
       { $set: userUpdate }
     );
+
+    // Communication verification feeds the assessment component of the Hiring
+    // Fit Score — refresh aiScore on open applications (best-effort).
+    if (passed) {
+      scheduleCandidateAiScoreRecompute(session.candidateId);
+    }
 
     res.status(200).json({
       success: true,

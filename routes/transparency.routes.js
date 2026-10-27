@@ -4,77 +4,72 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
+import { validate } from "../middleware/validate.js";
+import {
+  applicationStatusBody,
+  jobFitQuery,
+  objectIdParamSchema,
+} from "../lib/schemas.js";
+import { computeFitForUserAndJob } from "../services/fitScoreService.js";
+import { canonicalizeSkill, loadSkillVocabulary } from "../services/skillNormalize.js";
 
 const router = express.Router();
 
 // ─────────────────────────────────────────────────────────────
 // ENGINE 1 – FIT INTELLIGENCE
 // GET /api/jobs/:id/fit?uid=<firebaseUid>
-// Returns match score, direct skills, adjacent skills, missing skills
+// Returns the unified Hiring Fit Score (services/fitScore.js, fit-v1):
+//   { matchScore, score, directSkills, adjacentSkills, missingSkills, ... }
+// `matchScore` (= score.total) and the display arrays are kept for backward
+// compatibility with FitMapModal; `score` is the full explainable contract.
 // ─────────────────────────────────────────────────────────────
-router.get("/api/jobs/:id/fit", async (req, res) => {
+router.get(
+  "/api/jobs/:id/fit",
+  validate(objectIdParamSchema, "params"),
+  validate(jobFitQuery, "query"),
+  async (req, res) => {
     try {
         const db = getDB();
         const { id } = req.params;
         const { uid } = req.query;
 
-        if (!uid) {
-            return res.status(400).json({ success: false, message: "uid query param required" });
-        }
-
-        if (!ObjectId.isValid(id)) {
-            return res.status(400).json({ success: false, message: "Invalid job ID" });
-        }
-
-        // 1. Fetch job
+        // 1. Fetch job (404 before scoring)
         const job = await db.collection("find_jobs").findOne({ _id: new ObjectId(id) });
         if (!job) {
             return res.status(404).json({ success: false, message: "Job not found" });
         }
 
-        // 2. Fetch candidate skills
+        // 2. Candidate (a missing candidate scores as an empty profile —
+        //    same behaviour as the old engine, no 500s).
         const user = await db.collection("users").findOne({ firebaseUid: uid });
-        const candidateSkills = (user?.skills || []).map((s) => s.toLowerCase().trim());
 
-        // Job skills (required) — normalise
-        const requiredSkills = (job.skills || []).map((s) => s.toLowerCase().trim());
-        const niceToHaveSkills = (job.niceToHaveSkills || []).map((s) => s.toLowerCase().trim());
+        // 3. ONE unified, explainable score (taxonomy + optional embeddings).
+        const vocabulary = await loadSkillVocabulary();
+        const score = await computeFitForUserAndJob({
+            firebaseUid: uid,
+            jobId: job._id,
+            db,
+            vocabulary,
+            useEmbeddings: true, // graceful no-op when embeddings unavailable
+        });
 
-        // 3. Compute sets
-        const directSkills = requiredSkills.filter((s) => candidateSkills.includes(s));
-        const missingSkills = requiredSkills.filter((s) => !candidateSkills.includes(s));
-        const adjacentSkills = niceToHaveSkills.filter((s) => candidateSkills.includes(s));
+        // 4. Legacy display fields (original casing), derived from the same
+        //    canonical match the score used.
+        const canon = (s) => canonicalizeSkill(s, vocabulary) || String(s).toLowerCase().trim();
+        const matchedSet = new Set(score.matchedSkills);
+        const missingSet = new Set(score.missingSkills);
+        const candidateCanonicals = new Set((user?.skills || []).map(canon));
 
-        // 4. Score  (80% from required, 20% from nice-to-have)
-        const requiredScore = requiredSkills.length > 0
-            ? (directSkills.length / requiredSkills.length) * 80
-            : 80;
-
-        const niceScore = niceToHaveSkills.length > 0
-            ? (adjacentSkills.length / niceToHaveSkills.length) * 20
-            : 20;
-
-        const matchScore = Math.round(requiredScore + niceScore);
-
-        // 5. Return original-casing versions for display
         const originalRequired = job.skills || [];
-        const originalNiceToHave = job.niceToHaveSkills || [];
-        const userOriginalSkills = user?.skills || [];
-
-        const displayDirect = originalRequired.filter(
-            (s) => userOriginalSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())
-        );
-        const displayMissing = originalRequired.filter(
-            (s) => !userOriginalSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())
-        );
-        const displayAdjacent = originalNiceToHave.filter(
-            (s) => userOriginalSkills.map((u) => u.toLowerCase()).includes(s.toLowerCase())
-        );
+        const displayDirect = originalRequired.filter((s) => matchedSet.has(canon(s)));
+        const displayMissing = originalRequired.filter((s) => missingSet.has(canon(s)));
+        const displayAdjacent = (job.niceToHaveSkills || []).filter((s) => candidateCanonicals.has(canon(s)));
 
         res.status(200).json({
             success: true,
             data: {
-                matchScore,
+                matchScore: score.total,
+                score,
                 directSkills: displayDirect,
                 adjacentSkills: displayAdjacent,
                 missingSkills: displayMissing,
@@ -87,7 +82,8 @@ router.get("/api/jobs/:id/fit", async (req, res) => {
         console.error("Fit Engine Error:", error);
         res.status(500).json({ success: false, message: "Server error in fit engine" });
     }
-});
+  },
+);
 
 
 // ─────────────────────────────────────────────────────────────
@@ -147,7 +143,11 @@ router.post("/api/applications/:id/viewed", async (req, res) => {
 // PATCH /api/applications/:id/status
 // Recruiter changes status → updates DB, timeline, notification
 // ─────────────────────────────────────────────────────────────
-router.patch("/api/applications/:id/status", async (req, res) => {
+router.patch(
+    "/api/applications/:id/status",
+    validate(objectIdParamSchema, "params"),
+    validate(applicationStatusBody),
+    async (req, res) => {
     try {
         const db = getDB();
         const { id } = req.params;
@@ -240,7 +240,8 @@ router.patch("/api/applications/:id/status", async (req, res) => {
         console.error("Status Update Error:", error);
         res.status(500).json({ success: false, message: "Server error" });
     }
-});
+  },
+);
 
 
 // ─────────────────────────────────────────────────────────────

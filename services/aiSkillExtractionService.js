@@ -1,39 +1,30 @@
 // services/aiSkillExtractionService.js
-// Service to extract skills and experience from resume text using Gemini AI
+// Service to extract skills and experience from resume text using Gemini AI.
+// Gemini access goes through services/llm.js (single client + fallback chain).
+//
+// Hardening (Phase 3):
+//   • The prompt is built by services/injectionGuard.js — instructions and the
+//     output schema live OUTSIDE <untrusted_document> delimiters, and the
+//     delimited resume text is explicitly declared untrusted data.
+//   • The model must return an `evidence` map (skill -> short verbatim quote)
+//     for every extracted skill/technology.
+//   • Injection flags detected by the guard are surfaced on the result so the
+//     pipeline can store them on the resume document.
+//
+// Public API:
+//   extractSkillsFromResume(resumeText, opts?) -> {
+//     skills, experience_years, technologies, role_titles,
+//     evidence, injectionFlags, suspicious
+//   }
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateJSON } from "./llm.js";
+import { sanitizeUntrustedText, buildExtractionPrompt } from "./injectionGuard.js";
 
-const apiKey = process.env.GEMINI_API_KEY?.trim();
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
-
-// Model priority list - same as other AI services
-const MODEL_PRIORITY = [
-  "gemini-2.5-flash",
-  "gemini-flash-latest",
-  "gemini-2.0-flash",
-  "gemini-2.0-flash-001"
-];
-
-function getModel(modelName) {
-  if (!genAI) return null;
-  return genAI.getGenerativeModel({
-    model: modelName,
-    generationConfig: {
-      maxOutputTokens: 2048,
-      temperature: 0.1, // Low temperature for more deterministic JSON extraction
-    },
-  });
-}
-
-function parseRetryDelay(err) {
-  const msg = String(err?.message || err);
-  const match = msg.match(/retry\s+in\s+(\d+(?:\.\d+)?)\s*s/i);
-  if (match) return Math.min(parseFloat(match[1]) || 60, 120);
-  return 60;
-}
-
-function sleep(seconds) {
-  return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+// Duck-typed check (not `instanceof`): several test suites replace
+// services/llm.js with a partial mock, so we must not rely on importing the
+// LLMOutputError class — a missing named export would break their linking.
+function isLlmOutputError(error) {
+  return Boolean(error) && error.name === "LLMOutputError";
 }
 
 function uniqStrings(items) {
@@ -80,101 +71,50 @@ function extractTechFallback(resumeText) {
   return knownTech.filter((t) => lower.includes(t.toLowerCase()));
 }
 
-async function generateWithFallback(prompt, retryCount = 0) {
-  if (!genAI) {
-    throw new Error("Gemini API not configured. Set GEMINI_API_KEY in .env");
+/** Keep only string keys -> short string quotes; cap each quote length. */
+function sanitizeEvidence(raw, maxQuote = 240) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const k = String(key || "").trim();
+    const v = String(value || "").trim();
+    if (!k || !v) continue;
+    out[k] = v.length > maxQuote ? `${v.slice(0, maxQuote)}…` : v;
   }
-
-  let lastError = null;
-  let lastWas429 = false;
-
-  for (const modelName of MODEL_PRIORITY) {
-    try {
-      const model = getModel(modelName);
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      
-      if (text && text.trim()) {
-        console.log(`✓ Successfully used model: ${modelName} for skill extraction`);
-        return { text: text.trim(), modelUsed: modelName };
-      }
-    } catch (err) {
-      lastError = err;
-      const msg = String(err?.message || err).toLowerCase();
-      if (msg.includes("404") || msg.includes("503")) continue;
-      if (msg.includes("429") || msg.includes("quota")) {
-        lastWas429 = true;
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  if (lastWas429 && retryCount < 1) {
-    const delay = Math.min(parseRetryDelay(lastError), 90);
-    await sleep(delay);
-    return generateWithFallback(prompt, retryCount + 1);
-  }
-
-  throw lastError || new Error("All Gemini models failed. Try updating GEMINI_API_KEY or check your internet connection.");
+  return out;
 }
 
 /**
  * Extracts structured data (skills, experience, etc.) from raw resume text using AI.
  *
  * @param {string} resumeText - The raw text extracted from the resume
- * @returns {Promise<Object>} The extracted skills profile
+ * @param {Object} [opts]
+ * @param {string} [opts.schemaDescription] - Override the output JSON schema description
+ * @returns {Promise<Object>} The extracted skills profile (+ evidence + injection flags)
  */
-async function extractSkillsFromResume(resumeText) {
+async function extractSkillsFromResume(resumeText, { schemaDescription } = {}) {
   if (!resumeText || resumeText.trim() === '') {
     throw new Error('No resume text provided for extraction');
   }
 
-  const prompt = `You are an expert technical recruiter and resume parser.
-Extract technical skills, tools, technologies, overall years of experience, and role titles from the following resume text.
+  // Sanitize + fence the untrusted text once; the prompt builder keeps
+  // instructions/schema OUTSIDE the delimiters.
+  const guard = sanitizeUntrustedText(resumeText);
+  const prompt = buildExtractionPrompt(guard.text, schemaDescription);
 
-Return ONLY a valid JSON object. Do NOT include markdown blocks, explanations, or any other text.
-The JSON must follow this EXACT format:
-{
-  "skills": ["Array of general technical skills (e.g., Frontend Development, Backend Architecture)"],
-  "experience_years": <number representing total years of experience, or 0 if not found>,
-  "technologies": ["Array of specific tools, languages, and frameworks (e.g., React, JavaScript, Node.js, MongoDB)"],
-  "role_titles": ["Array of job titles found in the experience section"]
-}
-
-Resume Text:
-"""
-${resumeText.substring(0, 15000)} /* Truncate to avoid exceeding token limits if it's unreasonably long */
-"""
-`;
-
-  const { text } = await generateWithFallback(prompt);
-
-  // Parse JSON handling potential markdown wrappers
-  let jsonStr = text;
-  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (match) jsonStr = match[1].trim();
-
-  // Clean up any stray text outside JSON brackets
-  const firstBrace = jsonStr.indexOf('{');
-  const lastBrace = jsonStr.lastIndexOf('}');
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
-  }
-
+  let extractedData;
   try {
-    const extractedData = JSON.parse(jsonStr);
-    
-    // Normalize and ensure arrays exist
-    return {
-      skills: Array.isArray(extractedData.skills) ? extractedData.skills : [],
-      experience_years: Number(extractedData.experience_years) || 0,
-      technologies: Array.isArray(extractedData.technologies) ? extractedData.technologies : [],
-      role_titles: Array.isArray(extractedData.role_titles) ? extractedData.role_titles : []
-    };
+    extractedData = await generateJSON({
+      prompt,
+      temperature: 0.1, // Low temperature for more deterministic JSON extraction
+      maxOutputTokens: 2048,
+      promptTag: "resume.extraction",
+    });
   } catch (error) {
-    console.error("Failed to parse Skill Extraction JSON:", text);
-    const salvaged = salvageFromMalformedJson(text);
+    // Salvage whatever we can from malformed output; propagate real API/config errors.
+    if (!isLlmOutputError(error)) throw error;
+    console.error("Failed to parse Skill Extraction JSON:", error.message);
+    const salvaged = salvageFromMalformedJson(String(error.raw || ""));
     const fallbackTech = extractTechFallback(resumeText);
     const mergedTech = uniqStrings([...(salvaged.technologies || []), ...fallbackTech]);
 
@@ -183,8 +123,22 @@ ${resumeText.substring(0, 15000)} /* Truncate to avoid exceeding token limits if
       experience_years: Number(salvaged.experience_years) || 0,
       technologies: mergedTech,
       role_titles: uniqStrings(salvaged.role_titles),
+      evidence: {},
+      injectionFlags: guard.flags,
+      suspicious: guard.suspicious,
     };
   }
+
+  // Normalize and ensure arrays exist
+  return {
+    skills: uniqStrings(extractedData.skills),
+    experience_years: Number(extractedData.experience_years) || 0,
+    technologies: uniqStrings(extractedData.technologies),
+    role_titles: uniqStrings(extractedData.role_titles),
+    evidence: sanitizeEvidence(extractedData.evidence),
+    injectionFlags: guard.flags,
+    suspicious: guard.suspicious,
+  };
 }
 
 export { extractSkillsFromResume };

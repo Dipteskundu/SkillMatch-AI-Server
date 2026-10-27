@@ -1,30 +1,32 @@
 // controllers/resumeController.js
+//
+// Resume upload supports BOTH modes:
+//   • async (default): validate the file bytes, persist the resume doc
+//     (extractionStatus: "queued", raw bytes moved into the doc immediately),
+//     enqueue a `resume.extract` job and respond right away with
+//     { resumeId, extractionStatus: "queued" }. The frontend polls
+//     GET /api/resume/status/:uid.
+//   • sync (backward compatible): ?sync=true or the X-Sync-Resume: 1 header
+//     runs the whole pipeline inline and returns the original response shape
+//     (data.skills / technologies / experience_years / role_titles).
+//
+// The client-supplied mimetype is never trusted: magic bytes are checked
+// before anything is stored (mismatch -> 400).
 
 import { getDB } from "../config/db.js";
-import { extractTextFromResume } from "../services/resumeParserService.js";
-import { extractSkillsFromResume } from "../services/aiSkillExtractionService.js";
+import { validateResumeFileMagic } from "../services/resumeParserService.js";
+import { runResumePipeline } from "../services/resumePipeline.js";
+import { enqueue, getJob } from "../services/queue.js";
 
-function extractFallbackFromText(text) {
-  const source = String(text || "");
-  const lower = source.toLowerCase();
-  const knownTech = [
-    "JavaScript", "TypeScript", "React", "Next.js", "Node.js", "Express", "MongoDB",
-    "PostgreSQL", "MySQL", "Firebase", "Python", "Java", "C++", "C", "Tailwind CSS",
-    "Docker", "Kubernetes", "AWS", "Azure", "GCP", "Git", "Redux", "HTML", "CSS",
-  ];
-  const technologies = knownTech.filter((t) => lower.includes(t.toLowerCase()));
+const ACTIVE_JOB_STATUSES = new Set(["queued", "running"]);
 
-  return {
-    skills: technologies,
-    experience_years: 0,
-    technologies,
-    role_titles: [],
-  };
+function wantsSyncMode(req) {
+  if (req.query?.sync === "true" || req.query?.sync === "1") return true;
+  const header = req.get("x-sync-resume");
+  return header === "1" || header?.toLowerCase() === "true";
 }
 
-/**
- * Handle resume upload, parsing, AI extraction, and DB updates.
- */
+/** Handle resume upload: validation, then async (queued) or sync processing. */
 async function uploadResume(req, res) {
   try {
     const { candidateId } = req.body;
@@ -37,87 +39,165 @@ async function uploadResume(req, res) {
       return res.status(400).json({ success: false, message: "Resume file is required" });
     }
 
-    // 1. Extract raw text from the file
-    const extractedText = await extractTextFromResume(file);
-
-    // 2. Perform AI skill extraction (fallback safely if AI is unavailable)
-    let extractedData;
-    let warning = "";
-    try {
-      extractedData = await extractSkillsFromResume(extractedText);
-    } catch (aiError) {
-      console.error("AI extraction failed, using fallback extraction:", aiError);
-      extractedData = extractFallbackFromText(extractedText);
-      warning = "AI extraction was unavailable, so basic keyword extraction was used.";
+    // Reject files whose bytes don't match the declared mimetype (400).
+    const magic = validateResumeFileMagic(file);
+    if (!magic.ok) {
+      return res.status(400).json({ success: false, message: magic.message });
     }
 
     const db = getDB();
     const resumesCollection = db.collection("resumes");
-    const usersCollection = db.collection("users");
 
-    // 3. Save Resume record
+    // ── Sync mode: original behavior (inline pipeline, old response shape) ──
+    if (wantsSyncMode(req)) {
+      const outcome = await runResumePipeline({ candidateId, file });
+      if (outcome.status === "failed") {
+        return res.status(500).json({
+          success: false,
+          message: outcome.error || "Server error during resume processing",
+        });
+      }
+      return res.status(200).json({
+        success: true,
+        message: "Resume processed successfully",
+        warning: outcome.warning || undefined,
+        data: {
+          skills: outcome.skills,
+          technologies: outcome.technologies,
+          experience_years: outcome.experience_years,
+          role_titles: outcome.role_titles,
+        },
+      });
+    }
+
+    // ── Async mode: persist doc + bytes, enqueue, respond immediately ───────
+    // File bytes go straight into the doc (they leave the request's memory
+    // here, and are $unset by the pipeline once parsed).
     const resumeDoc = {
       candidateId,
       originalName: file.originalname,
       mimeType: file.mimetype,
       size: file.size,
-      extractedText,
-      extractedSkills: extractedData.skills || [],
-      extractedExperience: extractedData.experience_years || 0,
-      extractedTechnologies: extractedData.technologies || [],
-      extractedRoles: extractedData.role_titles || [],
+      fileBuffer: file.buffer,
+      extractedText: "",
+      extractedSkills: [],
+      extractedExperience: 0,
+      extractedTechnologies: [],
+      extractedRoles: [],
+      normalizedSkills: [],
+      injectionFlags: [],
+      extractionStatus: "queued",
       createdAt: new Date(),
+      updatedAt: new Date(),
     };
+    const { insertedId } = await resumesCollection.insertOne(resumeDoc);
 
-    await resumesCollection.insertOne(resumeDoc);
-
-    // 4. Update Candidate Profile
-    // We add new skills, avoiding duplicates
-    const candidate = await usersCollection.findOne({ firebaseUid: candidateId });
-    
-    let existingSkills = [];
-    if (candidate && candidate.skills) {
-      existingSkills = candidate.skills;
+    let jobId = null;
+    try {
+      ({ jobId } = await enqueue("resume.extract", {
+        resumeId: String(insertedId),
+        candidateId,
+      }));
+      await resumesCollection.updateOne({ _id: insertedId }, { $set: { jobId } });
+    } catch (queueError) {
+      console.error("Resume enqueue failed:", queueError);
+      await resumesCollection
+        .updateOne(
+          { _id: insertedId },
+          {
+            $set: {
+              extractionStatus: "failed",
+              error: queueError?.message || "Failed to enqueue resume processing",
+              processedAt: new Date(),
+              updatedAt: new Date(),
+            },
+            $unset: { fileBuffer: "" },
+          },
+        )
+        .catch(() => {});
+      return res.status(500).json({
+        success: false,
+        message: "Failed to queue resume processing. Please try again.",
+      });
     }
 
-    // Merge skills and deduplicate
-    const combinedSkills = Array.from(new Set([
-      ...existingSkills,
-      ...extractedData.skills,
-      ...extractedData.technologies
-    ]));
-
-    await usersCollection.updateOne(
-      { firebaseUid: candidateId },
-      {
-        $set: {
-          resumeUploaded: true,
-          skills: combinedSkills,
-          yearsOfExperience: extractedData.experience_years,
-          updatedAt: new Date()
-        }
-      }
-    );
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: "Resume processed successfully",
-      warning: warning || undefined,
+      message: "Resume uploaded and queued for processing",
       data: {
-        skills: extractedData.skills,
-        technologies: extractedData.technologies,
-        experience_years: extractedData.experience_years,
-        role_titles: extractedData.role_titles
-      }
+        resumeId: String(insertedId),
+        extractionStatus: "queued",
+      },
     });
-
   } catch (error) {
     console.error("Upload Resume Error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server error during resume processing"
+      message: error.message || "Server error during resume processing",
     });
   }
 }
 
-export { uploadResume };
+/**
+ * GET /api/resume/status/:uid
+ * Latest resume doc for the candidate + whether a processing job is active.
+ * Response shape is stable so the frontend can poll blindly.
+ */
+async function getResumeStatus(req, res) {
+  try {
+    const uid = req.params.uid;
+    if (!uid) {
+      return res.status(400).json({ success: false, message: "uid is required" });
+    }
+
+    const db = getDB();
+    const resumesCollection = db.collection("resumes");
+
+    const resume = await resumesCollection
+      .find({ candidateId: uid })
+      .sort({ createdAt: -1 })
+      .limit(1)
+      .toArray();
+
+    const doc = resume[0] || null;
+
+    // Is the extraction job for this resume still queued/running?
+    let hasActiveJob = false;
+    if (doc?.jobId) {
+      const job = await getJob(doc.jobId).catch(() => null);
+      hasActiveJob = Boolean(job && ACTIVE_JOB_STATUSES.has(job.status));
+    }
+    // Fallback when the job record is gone but the doc never progressed.
+    if (!hasActiveJob && doc && ACTIVE_JOB_STATUSES.has(doc.extractionStatus) && !doc.jobId) {
+      hasActiveJob = true;
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        resume: doc
+          ? {
+              _id: doc._id,
+              extractionStatus: doc.extractionStatus || "queued",
+              normalizedSkills: doc.normalizedSkills || [],
+              extractedExperience: doc.extractedExperience ?? 0,
+              injectionFlags: doc.injectionFlags || [],
+              error: doc.error || undefined,
+              processedAt: doc.processedAt || undefined,
+              originalName: doc.originalName || "",
+              createdAt: doc.createdAt,
+            }
+          : null,
+        hasActiveJob,
+      },
+    });
+  } catch (error) {
+    console.error("Resume Status Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error while fetching resume status",
+    });
+  }
+}
+
+export { uploadResume, getResumeStatus };

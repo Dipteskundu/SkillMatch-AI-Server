@@ -1,108 +1,69 @@
 // services/skillGapService.js
-// Compares candidate skills with job skills and generates AI learning suggestions
+// Compares candidate skills with job skills and generates AI learning suggestions.
+//
+// Phase 2: matched/missing/adjacent + matchScore now come from the ONE unified
+// fit engine (services/fitScore.js) with alias/adjacency normalization
+// (services/skillNormalize.js) — no more exact-lowercase-string comparison.
+// The Gemini learning-suggestions part is unchanged and still degrades to
+// deterministic suggestions when the LLM is down (services/llm.js).
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const apiKey = process.env.GEMINI_API_KEY?.trim();
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
-
-// Model priority list
-const MODEL_PRIORITY = [
-  "gemini-2.5-flash",
-  "gemini-flash-latest",
-  "gemini-2.0-flash",
-  "gemini-2.0-flash-001"
-];
-
-function getModel(modelName) {
-  if (!genAI) return null;
-  return genAI.getGenerativeModel({
-    model: modelName,
-    generationConfig: {
-      maxOutputTokens: 2048,
-      temperature: 0.4,
-    },
-  });
-}
-
-function parseRetryDelay(err) {
-  const msg = String(err?.message || err);
-  const match = msg.match(/retry\s+in\s+(\d+(?:\.\d+)?)\s*s/i);
-  if (match) return Math.min(parseFloat(match[1]) || 60, 120);
-  return 60;
-}
-
-function sleep(seconds) {
-  return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
-}
-
-async function generateWithFallback(prompt, retryCount = 0) {
-  if (!genAI) {
-    throw new Error("Gemini API not configured. Set GEMINI_API_KEY in .env");
-  }
-
-  let lastError = null;
-  let lastWas429 = false;
-
-  for (const modelName of MODEL_PRIORITY) {
-    try {
-      const model = getModel(modelName);
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      
-      if (text && text.trim()) {
-        return { text: text.trim(), modelUsed: modelName };
-      }
-    } catch (err) {
-      lastError = err;
-      const msg = String(err?.message || err).toLowerCase();
-      if (msg.includes("404") || msg.includes("503")) continue;
-      if (msg.includes("429") || msg.includes("quota")) {
-        lastWas429 = true;
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  if (lastWas429 && retryCount < 1) {
-    const delay = Math.min(parseRetryDelay(lastError), 90);
-    await sleep(delay);
-    return generateWithFallback(prompt, retryCount + 1);
-  }
-
-  throw lastError || new Error("All Gemini models failed.");
-}
+import { generateJSON } from "./llm.js";
+import { computeFitScore } from "./fitScore.js";
+import {
+  loadSkillVocabulary,
+  normalizeCandidateSkills,
+  normalizeJobSkills,
+} from "./skillNormalize.js";
 
 /**
  * Compares candidate skills with job requirements and analyzes the gap.
- * @param {Array<string>} candidateSkills 
- * @param {Array<string>} jobSkills 
- * @returns {Promise<Object>} The skill gap analysis
+ * @param {Array<string>} candidateSkills
+ * @param {Array<string>} jobSkills       required skills (raw strings)
+ * @param {Array<string>} [preferredSkills] nice-to-have skills (raw strings)
+ * @returns {Promise<Object>} The skill gap analysis:
+ *   { matchedSkills, missingSkills, adjacentSkills, matchScore, learningSuggestions }
+ *   (matched/missing preserve the original job-skill casing for display;
+ *    matchScore = the engine's skillMatch component, 0-100)
  */
-async function analyzeSkillGap(candidateSkills = [], jobSkills = []) {
-  // 1. Identify matches and missing skills (case insensitive)
-  const candidateLower = candidateSkills.map(s => s.toLowerCase().trim());
-  const jobLower = jobSkills.map(s => s.toLowerCase().trim());
+async function analyzeSkillGap(candidateSkills = [], jobSkills = [], preferredSkills = []) {
+  // 1. Normalize both sides via the canonical skill vocabulary
+  const vocabulary = await loadSkillVocabulary();
+  const candidate = normalizeCandidateSkills(candidateSkills, {}, vocabulary);
+  const required = normalizeJobSkills(jobSkills, vocabulary);
+  const preferred = normalizeJobSkills(preferredSkills || [], vocabulary);
 
-  const matchedSkills = [];
-  const missingSkills = [];
+  // 2. One unified score (skillMatch component is the "match score" here).
+  const score = computeFitScore({
+    candidate: { skills: candidate },
+    job: { requiredSkills: required, preferredSkills: preferred },
+    vocabulary,
+  });
 
-  for (let i = 0; i < jobLower.length; i++) {
-    const js = jobLower[i];
-    if (candidateLower.includes(js)) {
-      matchedSkills.push(jobSkills[i]); // Preserve original case
-    } else {
-      missingSkills.push(jobSkills[i]);
-    }
+  // 3. Preserve the original-case job skill strings for display + suggestions.
+  const canonicalToOriginal = new Map();
+  for (const item of required) {
+    if (!canonicalToOriginal.has(item.canonical)) canonicalToOriginal.set(item.canonical, item.name);
   }
+  const originalOf = (canonical) => canonicalToOriginal.get(canonical)
+    || required.find((r) => r.canonical === canonical)?.name
+    || canonical;
 
-  // 2. Calculate Match Score
-  const matchScore = jobSkills.length === 0 ? 100 : Math.round((matchedSkills.length / jobSkills.length) * 100);
+  const matchedSkills = score.matchedSkills.map(originalOf);
+  const missingSkills = score.missingSkills.map(originalOf);
+  const adjacentSkills = score.adjacentSkills.map((a) => ({
+    candidateSkill: a.candidateSkill,
+    jobSkill: originalOf(a.jobSkill),
+    credit: a.credit,
+    ...(a.semantic ? { semantic: true } : {}),
+  }));
 
-  // 3. Generate Learning Suggestions (only if there are missing skills)
+  // matchScore: skillMatch only (this endpoint has always been about skills).
+  // With no skills on either side the engine returns a neutral 50, never 100.
+  const matchScore = score.breakdown.skillMatch;
+
+  // 4. Generate Learning Suggestions (only if there are missing skills)
   let learningSuggestions = [];
-  
+
   if (missingSkills.length > 0) {
     try {
       const prompt = `A software engineering candidate applied for a job but is missing the following required skills:
@@ -118,22 +79,16 @@ Example format:
 ]
 `;
 
-      const { text } = await generateWithFallback(prompt);
-      
-      let jsonStr = text;
-      const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (match) jsonStr = match[1].trim();
+      const suggestions = await generateJSON({
+        prompt,
+        temperature: 0.4,
+        maxOutputTokens: 2048,
+        promptTag: "skillgap.suggestions",
+      });
 
-      const firstBracket = jsonStr.indexOf('[');
-      const lastBracket = jsonStr.lastIndexOf(']');
-      if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-        jsonStr = jsonStr.substring(firstBracket, lastBracket + 1);
-      }
-
-      learningSuggestions = JSON.parse(jsonStr);
-      if (!Array.isArray(learningSuggestions)) {
-        learningSuggestions = [];
-      }
+      learningSuggestions = Array.isArray(suggestions)
+        ? suggestions.map((s) => String(s))
+        : [];
     } catch (error) {
       console.error("Failed to generate learning suggestions from AI:", error);
       // Fallback suggestions
@@ -144,8 +99,9 @@ Example format:
   return {
     matchedSkills,
     missingSkills,
+    adjacentSkills,
     matchScore,
-    learningSuggestions
+    learningSuggestions,
   };
 }
 
