@@ -1,0 +1,536 @@
+{
+  "slug": "git-sdlc-design-patterns",
+  "title": "Git, GitHub, SDLC, and Software Design Patterns",
+  "topic": "Software Engineering Practices",
+  "category": "Engineering",
+  "level": "beginner",
+  "difficulty": "Beginner",
+  "description": "Learn the process and design fundamentals every software team relies on: Git version control, GitHub collaboration workflows, the software development lifecycle, and classic creational and structural design patterns.",
+  "objectives": [
+    "Track changes safely with Git's core commands",
+    "Collaborate through branches, pull requests, and conflict resolution",
+    "Explain each phase of the software development lifecycle",
+    "Apply Agile practices to plan and run work",
+    "Recognize and apply common creational and structural design patterns"
+  ],
+  "prerequisites": ["Basic JavaScript syntax", "Comfort using a terminal"],
+  "estimatedDuration": "5 weeks",
+  "estimatedHours": 40,
+  "tags": ["git", "github", "sdlc", "design-patterns", "version-control"],
+  "order": 7,
+  "status": "published",
+  "modules": [
+    {
+      "slug": "git-version-control",
+      "title": "Git Version Control",
+      "description": "Track changes with commits, isolate work with branches, and undo mistakes safely.",
+      "order": 1,
+      "estimatedHours": 10,
+      "prerequisites": [],
+      "completionCriteria": "Initialize a repository, commit work across two branches, and recover from a mistaken change using restore, reset, or revert.",
+      "lessons": [
+        {
+          "slug": "snapshots-with-git",
+          "title": "Snapshots with Git",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Initialize a repository and make commits", "Read status, diff, and log output"],
+          "topics": ["git-init", "commits", "staging"],
+          "content": {
+            "introduction": "Git records snapshots of your project. Each commit is a permanent checkpoint you can name, inspect, and return to.",
+            "explanation": "Three areas drive everything: the working directory (your files), the staging area (what the next commit will contain), and the repository history (committed snapshots). git add moves changes into staging, git commit turns staging into a permanent snapshot, and git status tells you where a file sits. Commits should be small and single-purpose with imperative messages — 'Add job search filters', not 'stuff' — because history is how teammates understand what changed and why.",
+            "examples": [
+              {
+                "title": "First commits in a new repository",
+                "language": "shell",
+                "code": "mkdir job-board && cd job-board\ngit init\necho \"# Job Board\" > README.md\ngit add README.md\ngit commit -m \"Initial commit\"\necho \"## Usage\" >> README.md\ngit status\ngit diff\ngit add README.md\ngit commit -m \"Document usage\"\ngit log --oneline",
+                "walkthrough": "init creates the repository, add stages a snapshot, commit records it. status and diff show what is unstaged before you commit, and log --oneline lists the checkpoints you have made."
+              }
+            ],
+            "useCase": "Every code change you ever want to share, review, or roll back.",
+            "knowledgeCheck": [
+              {
+                "question": "What does git add do?",
+                "type": "mcq",
+                "options": ["Stages changes for the next commit", "Publishes to GitHub", "Deletes the file", "Creates a branch"],
+                "correctIndex": 0,
+                "explanation": "add copies changes into the staging area; commit then records that snapshot."
+              },
+              {
+                "question": "Which command shows committed history?",
+                "type": "mcq",
+                "options": ["git log", "git status", "git diff", "git clone"],
+                "correctIndex": 0,
+                "explanation": "log lists commits newest-first; status shows the working tree and diff shows unstaged changes."
+              }
+            ],
+            "summary": "Working directory, staging area, repository. Add to stage, commit to record, status and log to inspect."
+          }
+        },
+        {
+          "slug": "branching-for-features",
+          "title": "Branching for Features",
+          "order": 2,
+          "durationMinutes": 25,
+          "isPreview": false,
+          "objectives": ["Create and switch between branches", "Merge a finished branch back"],
+          "topics": ["branches", "merge", "workflow"],
+          "content": {
+            "introduction": "A branch is a movable pointer to a commit. Branching lets you build a feature without touching the stable code on main.",
+            "explanation": "git switch -c creates a branch and moves you onto it, so new commits advance that pointer while main stays put. When the work is done, you switch back to main and merge the feature branch in. Merging with --no-ff keeps an explicit merge commit, which makes the branch structure visible in history and lets you revert the whole feature as one unit. Deleting the branch afterward keeps the list of pointers honest.",
+            "examples": [
+              {
+                "title": "Feature branch to merge",
+                "language": "shell",
+                "code": "git switch -c feature/job-search\n# ...edit files...\ngit add -p\ngit commit -m \"Add job search filters\"\ngit switch main\ngit pull\ngit merge --no-ff feature/job-search\ngit branch -d feature/job-search\ngit push origin main\ngit log --oneline --graph -8",
+                "walkthrough": "Work happens on the feature branch, main is updated with a pull first, --no-ff records the merge, and the merged branch is deleted once its commits live on main."
+              }
+            ],
+            "useCase": "Building any feature or fix without destabilizing the code everyone else is using.",
+            "knowledgeCheck": [
+              {
+                "question": "What does git switch -c do?",
+                "type": "mcq",
+                "options": ["Creates a branch and checks it out", "Deletes a branch", "Merges two branches", "Clones a remote repository"],
+                "correctIndex": 0,
+                "explanation": "The -c flag creates the new branch and switches to it in one step."
+              },
+              {
+                "question": "Why branch at all instead of committing to main?",
+                "type": "mcq",
+                "options": ["Branches are faster to type", "It isolates unfinished work so main stays stable and reviewable", "Git forbids committing to main", "It compresses files"],
+                "correctIndex": 1,
+                "explanation": "main stays deployable while work proceeds and gets reviewed on the branch."
+              }
+            ],
+            "summary": "Branch to isolate work, commit there, merge back into main, and delete the branch when done."
+          }
+        },
+        {
+          "slug": "undoing-work-safely",
+          "title": "Undoing Work Safely",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Choose between restore, reset, and revert", "Stash unfinished work"],
+          "topics": ["restore", "reset", "revert", "stash"],
+          "content": {
+            "introduction": "Mistakes are normal in Git. The important skill is picking the right undo — the answer depends on whether the change is staged, committed, or already pushed.",
+            "explanation": "To throw away local edits, use git restore. To unstage, restore --staged. To undo the latest local commit but keep its changes, reset --soft HEAD~1. To undo a commit that has already been pushed, never rewrite history — use git revert, which adds a new commit that inverse-applies the old one, keeping everyone else's clones valid. When you need to pause work mid-task, stash saves your changes aside and lets you pop them back later.",
+            "examples": [
+              {
+                "title": "Choosing an undo command",
+                "language": "shell",
+                "code": "git restore --staged src/app.js     # unstage, keep edits\ngit restore src/app.js             # discard local edits\ngit reset --soft HEAD~1            # undo last commit, keep changes staged\ngit stash push -m \"wip filters\"    # park unfinished work\ngit stash pop                      # bring it back\ngit revert a1b2c3d                 # undo a pushed commit with a new commit",
+                "walkthrough": "Each line targets a different point: working tree, staging area, local history, or shared history. The rule of thumb — rewrite what is local, revert what is shared."
+              }
+            ],
+            "useCase": "Fixing a wrong file, uncommitting a premature message, or cleaning up a commit before a review.",
+            "knowledgeCheck": [
+              {
+                "question": "How do you undo a commit that has already been pushed?",
+                "type": "mcq",
+                "options": ["git revert", "git reset --hard", "git restore", "Deleting the branch"],
+                "correctIndex": 0,
+                "explanation": "Revert adds a new commit that reverses the change, so shared history is never rewritten."
+              },
+              {
+                "question": "What does git stash let you do?",
+                "type": "mcq",
+                "options": ["Permanently delete the branch", "Park unfinished changes so you can switch tasks and restore them later", "Merge two repositories", "Compress the repository"],
+                "correctIndex": 1,
+                "explanation": "stash clears the working tree temporarily; pop or apply brings the changes back."
+              }
+            ],
+            "summary": "Restore discards, reset rewrites local commits, revert undoes pushed ones, and stash pauses work."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "github-collaboration",
+      "title": "Collaboration & GitHub Workflows",
+      "description": "Work with a team through remote branches, pull requests, and conflict resolution.",
+      "order": 2,
+      "estimatedHours": 12,
+      "prerequisites": ["git-version-control"],
+      "completionCriteria": "Push a feature branch, open and merge a pull request, and resolve a merge conflict without losing either side's work.",
+      "lessons": [
+        {
+          "slug": "feature-branch-workflow",
+          "title": "The Feature Branch Workflow",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Clone a remote repository", "Push a feature branch with an upstream"],
+          "topics": ["clone", "push", "remotes"],
+          "content": {
+            "introduction": "A remote such as GitHub is the shared copy of the repository. Everyone clones it, branches from it, and pushes their work back.",
+            "explanation": "clone copies the full history once. From then on you work on a branch and push it with -u, which sets the upstream so later git push and git pull know their default target. The core loop is: pull main to get teammates' work, create a branch, commit, push, open a pull request. Never push directly to main on a shared repository — it bypasses review and breaks anyone mid-clone.",
+            "examples": [
+              {
+                "title": "Clone, branch, push",
+                "language": "shell",
+                "code": "git clone https://github.com/acme/job-board.git\ncd job-board\ngit switch -c feature/job-search\ngit pull origin main          # start from the latest shared code\n# ...edit, add, commit...\ngit push -u origin feature/job-search\ngit status                    # shows branch and upstream",
+                "walkthrough": "The -u flag links your local branch to the remote one, so after the first push, plain git push sends your commits to the right place."
+              }
+            ],
+            "useCase": "Any team repository where more than one person commits code.",
+            "knowledgeCheck": [
+              {
+                "question": "What does git clone produce?",
+                "type": "mcq",
+                "options": ["A full local copy with history and a remote configured", "An empty folder", "A compiled binary", "A pull request"],
+                "correctIndex": 0,
+                "explanation": "Clone includes all commits and sets origin as the default remote."
+              },
+              {
+                "question": "Why push with -u the first time?",
+                "type": "mcq",
+                "options": ["It encrypts the branch", "It sets the upstream so later push and pull know the default target", "It grants write access", "It squashes commits"],
+                "correctIndex": 1,
+                "explanation": "Without an upstream, every push needs explicit remote and branch arguments."
+              }
+            ],
+            "summary": "Clone once, branch per feature, pull before you start, and push with -u to link the upstream."
+          }
+        },
+        {
+          "slug": "pull-requests-and-review",
+          "title": "Pull Requests and Code Review",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Open a pull request that explains the change", "Merge after review and checks"],
+          "topics": ["pull-requests", "code-review", "ci"],
+          "content": {
+            "introduction": "A pull request is a proposal: 'these commits should be merged, here is why.' It is where review and automated checks happen.",
+            "explanation": "A good pull request is small, links the issue it closes, and describes both what changed and how to test it. Reviewers comment on the diff before it lands; on GitHub you can approve, request changes, or leave suggestions. Required status checks — linting and tests — must pass before merging, which is what stops a broken build from reaching main. Squash merging keeps history linear by collapsing the branch into one commit with a clean message.",
+            "examples": [
+              {
+                "title": "Opening and merging a PR from the CLI",
+                "language": "shell",
+                "code": "git push -u origin feature/job-search\ngh pr create --title \"Add job search filters\" --body \"Closes #12\"\ngh pr checks                      # wait for CI to pass\ngh pr diff                       # review the exact changes\ngh pr review --approve            # record approval\ngh pr merge --squash --delete-branch",
+                "walkthrough": "The PR description closes the tracking issue automatically, checks gate the merge, and --squash --delete-branch leaves one clean commit on main and removes the feature branch."
+              }
+            ],
+            "useCase": "Merging any feature, fix, or refactor into a shared branch.",
+            "knowledgeCheck": [
+              {
+                "question": "What is the main purpose of a pull request?",
+                "type": "mcq",
+                "options": ["To propose and review changes before merging", "To compile the code", "To create a database", "To deploy automatically without review"],
+                "correctIndex": 0,
+                "explanation": "It is a reviewable proposal with discussion, checks, and an approval trail."
+              },
+              {
+                "question": "Why require CI checks to pass before merging?",
+                "type": "mcq",
+                "options": ["To slow the team down", "To prevent broken or failing code from reaching main", "Because Git cannot merge otherwise", "To generate documentation"],
+                "correctIndex": 1,
+                "explanation": "Automated tests and linting catch regressions before they land."
+              }
+            ],
+            "summary": "Small PRs with linked issues, review comments, green checks, and a squash merge keep history clean."
+          }
+        },
+        {
+          "slug": "resolving-merge-conflicts",
+          "title": "Resolving Merge Conflicts",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Recognize and resolve conflict markers", "Choose between merge and rebase"],
+          "topics": ["conflicts", "merge", "rebase"],
+          "content": {
+            "introduction": "A conflict means Git cannot decide which change to keep — both branches edited the same lines. Git stops and makes you choose.",
+            "explanation": "When a merge stops, the file contains marker blocks: <<<<<<< yours, =======, and >>>>>>> theirs, with your version first. You edit the file into the state you actually want, delete the markers, stage it, and commit. Two workflows avoid surprises: merge preserves the true history including branches and is safe for shared repositories, while rebase replays your commits on top of the latest main for a linear history — but rebasing rewrites commits, so never rebase anything already pushed. When a merge goes sideways, git merge --abort returns you to where you started.",
+            "examples": [
+              {
+                "title": "Walking through a conflict",
+                "language": "shell",
+                "code": "git switch main && git pull\ngit merge feature/job-search\n# CONFLICT (content): Merge conflict in src/app.js\ngit status\n# edit src/app.js: keep what you want, remove <<<<<<< ======= >>>>>>> lines\ngit add src/app.js\ngit commit -m \"Resolve conflict in app.js\"\n\n# start over instead:\ngit merge --abort",
+                "walkthrough": "status points at the conflicted files, you resolve by hand, staging the file tells Git the conflict is settled, and commit finishes the merge. abort is the escape hatch."
+              }
+            ],
+            "useCase": "Two people editing the same function, or a long-lived branch returning to an active main.",
+            "knowledgeCheck": [
+              {
+                "question": "What do the <<<<<<< and >>>>>>> markers mean?",
+                "type": "mcq",
+                "options": ["The file is corrupted", "Both branches changed the same region and you must choose the final content", "Git is deleting the file", "A test has failed"],
+                "correctIndex": 1,
+                "explanation": "The markers bracket each side's version; you edit the region into the correct result."
+              },
+              {
+                "question": "When is it safe to rebase?",
+                "type": "mcq",
+                "options": ["On local commits that have not been pushed", "On any commit in a shared repository", "Only on tags", "Never"],
+                "correctIndex": 0,
+                "explanation": "Rebase rewrites commit ids; doing it to pushed work diverges from everyone else's history."
+              }
+            ],
+            "summary": "Conflicts are your decision to make: edit, stage, commit — or abort and try again."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "software-development-lifecycle",
+      "title": "Software Development Lifecycle",
+      "description": "How software is planned, built, tested, released, and maintained as a repeatable process.",
+      "order": 3,
+      "estimatedHours": 8,
+      "prerequisites": ["github-collaboration"],
+      "completionCriteria": "Describe each SDLC phase for a real feature and map it onto an Agile sprint with an automated test and deployment step.",
+      "lessons": [
+        {
+          "slug": "phases-of-the-sdlc",
+          "title": "Phases of the SDLC",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Name and order the SDLC phases", "Explain the output of each phase"],
+          "topics": ["sdlc", "planning", "requirements"],
+          "content": {
+            "introduction": "The software development lifecycle is the sequence of phases a team moves through to plan, build, release, and maintain a product.",
+            "explanation": "Requirements gather what and why — user stories with acceptance criteria. Design decides how: architecture, data models, interfaces. Implementation turns designs into code. Verification tests against the requirements, not just the code. Deployment ships it to users. Maintenance is the longest phase: monitoring, bug fixes, and iterations based on real feedback. The phases are not strictly one-way — feedback loops send teams back to design or requirements, which is why the cycle is drawn as a loop rather than a line.",
+            "examples": [
+              {
+                "title": "One iteration through the lifecycle",
+                "language": "javascript",
+                "code": "// Pseudocode: one pass through the SDLC\nconst feature = gatherRequirements(stakeholders);\nconst design = reviewDesign(proposal(feature));\nconst code = implement(design);\n\nrun(unitTests(code), integrationTests(code));\nconst approved = codeReview(code);\n\nif (approved) deploy(\"staging\");\nmonitor(\"production\");\n\nconst feedback = collectFeedback(production);\nplan(nextSprint, feedback); // loop back to requirements",
+                "walkthrough": "Each line is a phase with a concrete artifact — requirements, design doc, code, test results, review, release, telemetry — and the final line feeds real-world feedback into the next round of planning."
+              }
+            ],
+            "useCase": "Any feature from idea to production, from a two-person app to an enterprise release.",
+            "knowledgeCheck": [
+              {
+                "question": "Which phase defines what the software must do and why?",
+                "type": "mcq",
+                "options": ["Requirements", "Deployment", "Monitoring", "Refactoring"],
+                "correctIndex": 0,
+                "explanation": "Requirements capture user needs and acceptance criteria before design begins."
+              },
+              {
+                "question": "Why is the SDLC drawn as a cycle rather than a line?",
+                "type": "mcq",
+                "options": ["Because phases are skipped in practice", "Because feedback from use sends the team back to requirements and design", "Because Git requires it", "Because testing never ends"],
+                "correctIndex": 1,
+                "explanation": "Real products iterate; maintenance and user feedback drive the next improvements."
+              }
+            ],
+            "summary": "Requirements, design, implementation, verification, deployment, maintenance — with feedback loops between them."
+          }
+        },
+        {
+          "slug": "agile-and-scrum",
+          "title": "Agile and Scrum Cadence",
+          "order": 2,
+          "durationMinutes": 25,
+          "isPreview": false,
+          "objectives": ["Explain backlog, sprint, and ceremony roles", "Run a short inspection loop"],
+          "topics": ["agile", "scrum", "sprints"],
+          "content": {
+            "introduction": "Agile replaces big up-front plans with short iterations that deliver working software and respond to change.",
+            "explanation": "Work lives in a product backlog — a prioritized list of user stories. A sprint is a fixed time box, typically one or two weeks, in which the team commits to a sprint goal and pulls in what it can finish. Daily standups sync progress and surface blockers, the sprint review demos done work, and the retrospective asks what to improve. The team is self-organizing: estimates come from the people doing the work, and the product owner owns priority.",
+            "examples": [
+              {
+                "title": "A sprint as a small state machine",
+                "language": "javascript",
+                "code": "const sprint = { length: \"2 weeks\", goal: \"Ship job search\" };\nconst board = { todo: [...backlog], doing: [], review: [], done: [] };\n\ndaily(() => {\n  standup([\"yesterday\", \"today\", \"blockers\"]);\n  escalate(blocked(board.doing));\n});\n\nsprintEnd(() => {\n  demo(board.done);            // sprint review\n  retrospective();             // what to improve\n  assert(board.done.length > 0); // working software every sprint\n  sprint.goal = nextGoal(backlog);\n});",
+                "walkthrough": "Cards flow across the board, the daily standup keeps blockers visible, and the sprint closes with a demo and a retrospective before the next goal is set."
+              }
+            ],
+            "useCase": "Any team delivering software incrementally instead of one large release at the end.",
+            "knowledgeCheck": [
+              {
+                "question": "What is a sprint?",
+                "type": "mcq",
+                "options": ["A fixed time box for delivering an increment of work", "A type of bug", "A code review tool", "The final release only"],
+                "correctIndex": 0,
+                "explanation": "Sprints are short, bounded iterations that end with demonstrated, working software."
+              },
+              {
+                "question": "What is the purpose of the retrospective?",
+                "type": "mcq",
+                "options": ["To demo features to stakeholders", "To inspect how the team worked and decide what to improve", "To estimate the budget", "To write the requirements"],
+                "correctIndex": 1,
+                "explanation": "The demo is about the product; the retrospective is about the process and the team."
+              }
+            ],
+            "summary": "Prioritized backlog, time-boxed sprints, daily syncs, demo, retrospective — working software every iteration."
+          }
+        },
+        {
+          "slug": "testing-and-ci-in-the-lifecycle",
+          "title": "Testing and CI in the Lifecycle",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Place unit, integration, and e2e tests in the pipeline", "Read a basic CI workflow"],
+          "topics": ["testing", "continuous-integration", "pipeline"],
+          "content": {
+            "introduction": "Verification is only useful if it runs on every change. Continuous integration turns testing into an automatic gate rather than a manual chore.",
+            "explanation": "Tests are layered by cost and scope: unit tests are fast and check one function, integration tests exercise routes and databases, and end-to-end tests drive a real browser through a user journey. CI runs the cheap layers first so failures surface in seconds, then the expensive ones. A pipeline that runs on every push and pull request means broken code is caught in minutes, before it can reach main — which is exactly the verification phase of the SDLC made continuous.",
+            "examples": [
+              {
+                "title": "A GitHub Actions CI workflow",
+                "language": "yaml",
+                "code": "name: CI\non: [push, pull_request]\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n      - run: npm ci\n      - run: npm run lint\n      - run: npm test\n      - run: npm run test:e2e",
+                "walkthrough": "Every push and PR triggers a clean checkout, a pinned Node version, and a dependency install, followed by linting, unit tests, and end-to-end tests in order of increasing cost."
+              }
+            ],
+            "useCase": "Protecting main from regressions on any project with automated tests.",
+            "knowledgeCheck": [
+              {
+                "question": "Why run unit tests before end-to-end tests in CI?",
+                "type": "mcq",
+                "options": ["Unit tests are faster, so failures show up sooner", "E2E tests cannot run in CI", "Unit tests require no code", "Linting forbids the other order"],
+                "correctIndex": 0,
+                "explanation": "Cheap checks first give the fastest feedback; slow browser tests run only after they pass."
+              },
+              {
+                "question": "What does continuous integration actually integrate?",
+                "type": "mcq",
+                "options": ["Design documents", "Each developer's changes into the shared mainline, verified by automated tests", "Only manual QA reports", "Production databases"],
+                "correctIndex": 1,
+                "explanation": "Frequent merges with automated verification keep the shared branch in a working state."
+              }
+            ],
+            "summary": "Layer tests from fast to slow, run them automatically on every change, and treat green CI as the gate to main."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "creational-structural-patterns",
+      "title": "Creational & Structural Design Patterns",
+      "description": "Proven solutions for creating objects and composing them into larger structures.",
+      "order": 4,
+      "estimatedHours": 10,
+      "prerequisites": ["software-development-lifecycle"],
+      "completionCriteria": "Identify a repeated design problem in existing code and apply Singleton, Factory, Builder, or Adapter to solve it without changing how callers use it.",
+      "lessons": [
+        {
+          "slug": "singleton-and-factory",
+          "title": "Singleton and Factory",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Limit a class to one shared instance", "Create objects through a factory function"],
+          "topics": ["singleton", "factory", "creational"],
+          "content": {
+            "introduction": "Design patterns are named solutions to problems that recur across projects. Two creational patterns you will meet early control how objects come into existence.",
+            "explanation": "Singleton guarantees a single shared instance — appropriate for genuinely one-per-process resources like a database connection or logger, and a poor fit for state you might want isolated per test. A factory hides construction behind a function: callers describe what they want and the factory decides which concrete object to return. Factories keep creation logic in one place, so adding a new variant means editing the factory instead of hunting construction sites through the codebase.",
+            "examples": [
+              {
+                "title": "Singleton connection and a notifier factory",
+                "language": "javascript",
+                "code": "// Singleton: one shared connection per process\nlet instance = null;\nexport function getDb() {\n  if (!instance) instance = connect(process.env.DB_URL);\n  return instance;\n}\n\n// Factory: creation logic in one place\nconst notifiers = {\n  email: (msg) => sendEmail(msg),\n  sms: (msg) => sendSms(msg),\n};\nexport function notify(channel, msg) {\n  const send = notifiers[channel];\n  if (!send) throw new Error(\"Unknown channel: \" + channel);\n  return send(msg);\n}",
+                "walkthrough": "getDb returns the same connection every call instead of opening new ones. notify maps a channel name to the right sender, so callers never construct notifiers themselves."
+              }
+            ],
+            "useCase": "Shared infrastructure objects (connections, loggers) and pluggable variants (payment or notification channels).",
+            "knowledgeCheck": [
+              {
+                "question": "What problem does the Singleton pattern solve?",
+                "type": "mcq",
+                "options": ["Creating many identical objects", "Ensuring only one instance exists for a shared resource", "Sorting collections", "Rendering UI components"],
+                "correctIndex": 1,
+                "explanation": "One process-wide instance prevents duplicate connections or conflicting state."
+              },
+              {
+                "question": "What is the main benefit of a factory function?",
+                "type": "mcq",
+                "options": ["It removes the need for classes everywhere", "It centralizes creation logic so variants change in one place", "It makes code run faster", "It deletes unused objects"],
+                "correctIndex": 1,
+                "explanation": "Callers ask for an outcome; the factory owns the decision about what to build."
+              }
+            ],
+            "summary": "Singleton owns one shared instance; a factory owns creation logic so variants stay in one place."
+          }
+        },
+        {
+          "slug": "prototype-and-builder",
+          "title": "Prototype and Builder",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Reuse objects through prototypes", "Construct complex objects step by step"],
+          "topics": ["prototype", "builder", "creational"],
+          "content": {
+            "introduction": "When construction takes several steps or you want cheap copies of existing objects, Prototype and Builder keep the calling code clean.",
+            "explanation": "Prototype creates new objects by copying an existing one — in JavaScript this is the language's core mechanism: Object.create delegates to a prototype, and {...obj} makes a shallow copy, which is far cheaper than re-running a constructor for every item. Builder assembles a complex object step by step through chained calls, then hands over a finished value. It shines when construction has many optional parts, because a builder makes the order and defaults explicit instead of a long positional argument list.",
+            "examples": [
+              {
+                "title": "A chainable query builder",
+                "language": "javascript",
+                "code": "class JobQuery {\n  constructor() {\n    this.filters = {};\n    this.sort = {};\n    this.limit = 20;\n  }\n  where(cond) { Object.assign(this.filters, cond); return this; }\n  orderBy(field, dir = 1) { this.sort[field] = dir; return this; }\n  take(n) { this.limit = n; return this; }\n  build() {\n    return { filter: this.filters, sort: this.sort, limit: this.limit };\n  }\n}\n\nconst query = new JobQuery()\n  .where({ remote: true })\n  .orderBy(\"postedAt\", -1)\n  .take(10)\n  .build();   // { filter: { remote: true }, sort: { postedAt: -1 }, limit: 10 }",
+                "walkthrough": "Each method returns this, so calls chain readably, and build() produces the final value with sensible defaults — no constructor with ten optional parameters."
+              }
+            ],
+            "useCase": "Query builders, report configuration, and copying template objects with per-item tweaks.",
+            "knowledgeCheck": [
+              {
+                "question": "When is the Builder pattern most useful?",
+                "type": "mcq",
+                "options": ["When an object needs many optional construction steps", "When an object has no fields", "When you need to delete an object", "When sorting a list"],
+                "correctIndex": 0,
+                "explanation": "Chained steps replace long, error-prone argument lists for complex objects."
+              },
+              {
+                "question": "How does JavaScript's prototype mechanism create objects?",
+                "type": "mcq",
+                "options": ["By compiling classes ahead of time", "By delegating property lookups to a shared prototype object", "By copying the DOM", "Through a database index"],
+                "correctIndex": 1,
+                "explanation": "Objects inherit behavior from their prototype, which is why {...obj} can cheaply copy and extend one."
+              }
+            ],
+            "summary": "Prototype reuses existing objects by copying; Builder constructs complex values step by step with explicit defaults."
+          }
+        },
+        {
+          "slug": "adapter-and-decorator",
+          "title": "Adapter and Decorator",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Wrap incompatible interfaces with an adapter", "Add behavior by stacking decorators"],
+          "topics": ["adapter", "decorator", "structural"],
+          "content": {
+            "introduction": "Structural patterns are about composing objects. Adapter makes an awkward interface fit yours; Decorator adds behavior without modifying the original.",
+            "explanation": "An Adapter translates one interface into another the rest of your code expects, so a legacy SDK, a third-party API, or a differently shaped service can be swapped in behind a stable call. That translation lives in exactly one class. Decorators wrap an object and extend it — each one adds a single concern such as logging, caching, or auth. Stacking small decorators beats a monolithic wrapper, and it is the same idea behind Express middleware: each function wraps the next and adds one behavior.",
+            "examples": [
+              {
+                "title": "Adapting a legacy XML service",
+                "language": "javascript",
+                "code": "// Legacy service speaks XML; the rest of the app wants objects\nclass LegacyBilling {\n  getInvoiceXml(id) {\n    return `<invoice id=\"${id}\" total=\"42.00\"/>`;\n  }\n}\n\n// Adapter presents the interface the app expects\nclass BillingAdapter {\n  constructor(legacy) { this.legacy = legacy; }\n  getInvoice(id) {\n    const xml = this.legacy.getInvoiceXml(id);\n    const total = Number(/total=\"([\\d.]+)\"/.exec(xml)?.[1] ?? 0);\n    return { id, total, currency: \"USD\" };\n  }\n}\n\nconst billing = new BillingAdapter(new LegacyBilling());",
+                "walkthrough": "The rest of the application calls billing.getInvoice(id) and receives a plain object; only the adapter knows about XML, so replacing the legacy service means changing one class."
+              }
+            ],
+            "useCase": "Integrating third-party SDKs, wrapping legacy code, and adding logging or auth around a call.",
+            "knowledgeCheck": [
+              {
+                "question": "What does an Adapter do?",
+                "type": "mcq",
+                "options": ["Converts one interface into another the caller expects", "Speeds up queries", "Stores objects in memory", "Generates unit tests"],
+                "correctIndex": 0,
+                "explanation": "It translates calls and data so an incompatible dependency fits your codebase."
+              },
+              {
+                "question": "How does a Decorator add behavior?",
+                "type": "mcq",
+                "options": ["By editing the original class source", "By wrapping the object and extending it around the original calls", "By deleting unused methods", "By changing the database schema"],
+                "correctIndex": 1,
+                "explanation": "Wrapping keeps the original untouched, so decorators stack independently — like Express middleware."
+              }
+            ],
+            "summary": "Adapter translates foreign interfaces to yours; Decorator wraps objects to add one concern at a time."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -21,7 +21,6 @@ function buildMongoUriFromPieces() {
 export function loadEnv() {
   const errors = [];
   const warnings = [];
-  const firebaseErrors = [];
 
   const MONGODB_URI =
     process.env.MONGODB_URI ||
@@ -44,41 +43,9 @@ export function loadEnv() {
     warnings.push("DB_USER/DB_PASS set but DB_HOST is missing.");
   }
 
-  // Firebase Admin (optional). Used for verifying Firebase ID tokens and RTDB notifications.
-  // Prefer FIREBASE_SERVICE_ACCOUNT_JSON in serverless (Vercel) environments.
-  const FIREBASE_SERVICE_ACCOUNT_JSON =
-    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
-    process.env.FIREBASE_ADMIN_SDK_JSON ||
-    "";
-
-  const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "";
-  const FIREBASE_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL || "";
-  const FIREBASE_PRIVATE_KEY = process.env.FIREBASE_PRIVATE_KEY || "";
-  const FIREBASE_DATABASE_URL = process.env.FIREBASE_DATABASE_URL || "";
-
-  const hasFirebasePieces =
-    Boolean(FIREBASE_PROJECT_ID) &&
-    Boolean(FIREBASE_CLIENT_EMAIL) &&
-    Boolean(FIREBASE_PRIVATE_KEY);
-
-  if (FIREBASE_SERVICE_ACCOUNT_JSON && hasFirebasePieces) {
-    warnings.push(
-      "Both FIREBASE_SERVICE_ACCOUNT_JSON and FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY are set. FIREBASE_SERVICE_ACCOUNT_JSON will be used.",
-    );
-  }
-
-  // Only flag errors when some firebase vars are present but incomplete (avoid noisy errors by default).
-  const anyFirebaseVars =
-    Boolean(FIREBASE_SERVICE_ACCOUNT_JSON) ||
-    Boolean(FIREBASE_PROJECT_ID) ||
-    Boolean(FIREBASE_CLIENT_EMAIL) ||
-    Boolean(FIREBASE_PRIVATE_KEY) ||
-    Boolean(FIREBASE_DATABASE_URL);
-
-  if (anyFirebaseVars && !FIREBASE_SERVICE_ACCOUNT_JSON && !hasFirebasePieces) {
-    firebaseErrors.push(
-      "Firebase Admin config incomplete. Set FIREBASE_SERVICE_ACCOUNT_JSON (recommended) or FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY.",
-    );
+  // A production deploy must not fall back to the public default secret.
+  if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+    errors.push("JWT_SECRET is required in production.");
   }
 
   return {
@@ -93,15 +60,11 @@ export function loadEnv() {
       CORS_ORIGIN: process.env.CORS_ORIGIN || "",
       PORT: process.env.PORT || "5000",
       GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
-      FIREBASE_SERVICE_ACCOUNT_JSON,
-      FIREBASE_PROJECT_ID,
-      FIREBASE_CLIENT_EMAIL,
-      FIREBASE_PRIVATE_KEY,
-      FIREBASE_DATABASE_URL,
+      JWT_SECRET: process.env.JWT_SECRET || "",
+      JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
     },
     errors,
     warnings,
-    firebaseErrors,
     isProd: process.env.NODE_ENV === "production",
   };
 }

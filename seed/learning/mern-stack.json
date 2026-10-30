@@ -1,0 +1,536 @@
+{
+  "slug": "mern-stack",
+  "title": "MERN Stack Development",
+  "topic": "Full-Stack Development",
+  "category": "Full Stack",
+  "level": "intermediate",
+  "difficulty": "Intermediate",
+  "description": "Integrate React, Express, MongoDB, and Node into one cohesive application: structure the project, build a dependable API, wire the client to it, and ship it with authentication and production hardening.",
+  "objectives": [
+    "Trace a request through every layer of the MERN stack",
+    "Structure a configurable server and client codebase",
+    "Build a validated, paginated REST API with Express and Mongoose",
+    "Connect a React client with loading, error, and optimistic states",
+    "Add JWT authentication and prepare the app for production"
+  ],
+  "prerequisites": ["React fundamentals", "Express routing basics", "MongoDB and Mongoose CRUD"],
+  "estimatedDuration": "9 weeks",
+  "estimatedHours": 72,
+  "tags": ["mern", "mongodb", "express", "react", "nodejs"],
+  "order": 6,
+  "status": "published",
+  "modules": [
+    {
+      "slug": "mern-architecture-setup",
+      "title": "MERN Architecture & Project Setup",
+      "description": "How the four layers fit together, and how to scaffold a clean, configurable project.",
+      "order": 1,
+      "estimatedHours": 16,
+      "prerequisites": [],
+      "completionCriteria": "Scaffold a MERN repo where an Express server connects to MongoDB and exposes a health-checked API the React client can reach.",
+      "lessons": [
+        {
+          "slug": "mern-request-lifecycle",
+          "title": "The MERN Request Lifecycle",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Trace a request from React through Express to MongoDB", "Assign clear ownership to each layer"],
+          "topics": ["architecture", "request-flow", "express"],
+          "content": {
+            "introduction": "MERN is four layers passing data back and forth: React renders and initiates requests, Express routes them, Mongoose maps them to MongoDB, and the result travels back as JSON to update the UI.",
+            "explanation": "A typical flow: a React event handler calls fetch('/api/jobs'), Express matches the path and method, a handler runs a Mongoose query, Mongoose serializes documents into plain objects, and Express sends them with a status code. The contract between the frontend and backend is JSON plus HTTP status codes — nothing else. Keeping that contract explicit is what lets you swap or rewrite either side without breaking the other.",
+            "examples": [
+              {
+                "title": "An Express handler at the center of the flow",
+                "language": "javascript",
+                "code": "app.get(\"/api/jobs/:id\", async (req, res, next) => {\n  try {\n    const job = await Job.findById(req.params.id);\n    if (!job) return res.status(404).json({ error: \"Not found\" });\n    res.json(job);\n  } catch (err) {\n    next(err);\n  }\n});\n\n// React side\nconst job = await fetch(`/api/jobs/${id}`).then((r) => r.json());",
+                "walkthrough": "The route reads a param, queries Mongo, and answers with JSON. Errors are delegated to Express so one handler formats them consistently for the client."
+              }
+            ],
+            "useCase": "Any feature where a user action in React must read or write a MongoDB document.",
+            "knowledgeCheck": [
+              {
+                "question": "Where does Express sit in the MERN request lifecycle?",
+                "type": "mcq",
+                "options": ["Between the browser and the database, routing HTTP requests", "Inside the browser as a rendering engine", "Between MongoDB replica set members", "In the CSS rendering pipeline"],
+                "correctIndex": 0,
+                "explanation": "Express receives HTTP requests from the client and is the only layer that talks to MongoDB through Mongoose."
+              },
+              {
+                "question": "What is the data contract between the React client and the Express API?",
+                "type": "mcq",
+                "options": ["HTML form posts only", "JSON bodies with HTTP status codes", "Shared memory between processes", "Direct MongoDB connections from the browser"],
+                "correctIndex": 1,
+                "explanation": "The client sends and receives JSON; status codes signal success or the kind of failure."
+              }
+            ],
+            "summary": "React initiates, Express routes, Mongoose queries, JSON returns. Keep the HTTP contract explicit on both sides."
+          }
+        },
+        {
+          "slug": "project-structure-and-config",
+          "title": "Project Structure and Configuration",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Split server and client into a clear folder layout", "Load secrets from environment variables"],
+          "topics": ["project-structure", "environment", "configuration"],
+          "content": {
+            "introduction": "A MERN app grows fast. A boring, predictable layout plus strict environment configuration prevents the 'works on my machine' class of bugs.",
+            "explanation": "Keep server and client in one repo but in separate folders with their own package.json, so each can build and deploy independently. Centralize configuration in one module that reads process.env and fails fast when a required variable is missing — never scatter process.env calls through handlers. Secrets never belong in code or committed .env files; only non-secret defaults live in the repo.",
+            "examples": [
+              {
+                "title": "Fail-fast configuration module",
+                "language": "javascript",
+                "code": "// server/src/config.js\nimport \"dotenv/config\";\n\nexport const config = {\n  port: Number(process.env.PORT) || 4000,\n  mongoUri: process.env.MONGO_URI,\n  clientOrigin: process.env.CLIENT_ORIGIN || \"http://localhost:5173\",\n  jwtSecret: process.env.JWT_SECRET,\n};\n\nif (!config.mongoUri) throw new Error(\"MONGO_URI is required\");\nif (!config.jwtSecret) throw new Error(\"JWT_SECRET is required\");",
+                "walkthrough": "One module owns all configuration and crashes at startup if something is missing — the failure surfaces immediately instead of at the first login. Typical layout: server/src/{routes,models,config.js} and client/src/."
+              }
+            ],
+            "useCase": "Every environment: local dev, staging, and production each supply their own .env values.",
+            "knowledgeCheck": [
+              {
+                "question": "Where should secrets like MONGO_URI live?",
+                "type": "mcq",
+                "options": ["In a committed config.js file", "In environment variables read at startup", "In the React bundle", "In a MongoDB collection"],
+                "correctIndex": 1,
+                "explanation": "Environment variables keep secrets out of source control and let each environment supply its own values."
+              },
+              {
+                "question": "Why throw at startup when a required variable is missing?",
+                "type": "mcq",
+                "options": ["It slows the app down", "It fails fast, before any request is mishandled", "It is required by React", "It triggers a rebuild"],
+                "correctIndex": 1,
+                "explanation": "An early crash is cheap and obvious; a missing value discovered mid-request is a production incident."
+              }
+            ],
+            "summary": "Separate server and client folders, centralize config in one fail-fast module, keep secrets in environment variables."
+          }
+        },
+        {
+          "slug": "mongoose-connection-and-models",
+          "title": "Mongoose Connection and Models",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Open a resilient Mongoose connection", "Model API resources with schemas"],
+          "topics": ["mongoose", "schemas", "models"],
+          "content": {
+            "introduction": "Your API is only as trustworthy as its data layer. A single shared connection and well-chosen schemas keep it predictable.",
+            "explanation": "Mongoose connects once at startup and reuses that connection for every query — connecting per request would exhaust the database's connection pool. Schemas do more than type your documents: they enforce shape, set defaults, and can run transforms such as hiding a password hash. Index fields you sort or filter on, because a collection scan on every request will eventually time out.",
+            "examples": [
+              {
+                "title": "Connection helper and a Job model",
+                "language": "javascript",
+                "code": "import mongoose from \"mongoose\";\n\nexport async function connectDB(uri) {\n  await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });\n  console.log(\"mongo connected\");\n}\n\nmongoose.connection.on(\"error\", (err) =>\n  console.error(\"mongo connection error\", err)\n);\n\nconst jobSchema = new mongoose.Schema(\n  { title: { type: String, required: true }, company: String, postedAt: Date },\n  { timestamps: true }\n);\njobSchema.index({ postedAt: -1 });\nexport const Job = mongoose.model(\"Job\", jobSchema);",
+                "walkthrough": "connectDB is called once from server entry. The schema marks title as required, enables timestamps, and adds an index for the sort the list endpoint uses."
+              }
+            ],
+            "useCase": "Any collection your API reads or writes: jobs, users, applications, audit logs.",
+            "knowledgeCheck": [
+              {
+                "question": "When should the Mongoose connection be opened?",
+                "type": "mcq",
+                "options": ["Once when the server starts", "Before every query", "On each React render", "Only when a write fails"],
+                "correctIndex": 0,
+                "explanation": "Mongoose pools connections; one startup connection is shared by all queries."
+              },
+              {
+                "question": "Why index a field you frequently sort or filter on?",
+                "type": "mcq",
+                "options": ["It encrypts the field", "It lets MongoDB find and order rows without scanning the whole collection", "It converts the field to JSON", "It makes documents smaller"],
+                "correctIndex": 1,
+                "explanation": "Indexes give MongoDB a sorted lookup path, turning a full collection scan into a direct read."
+              }
+            ],
+            "summary": "Connect once at startup, encode invariants in schemas, and index every field you query."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "building-api-layer",
+      "title": "Building the API Layer",
+      "description": "Routes, validation, error handling, and query patterns that make an API dependable.",
+      "order": 2,
+      "estimatedHours": 20,
+      "prerequisites": ["mern-architecture-setup"],
+      "completionCriteria": "Ship a CRUD API with validated request bodies, pagination, and a single centralized error handler.",
+      "lessons": [
+        {
+          "slug": "resource-oriented-routes",
+          "title": "Resource-Oriented Routes",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Map REST verbs to CRUD operations", "Mount feature routers from one entry point"],
+          "topics": ["rest", "routing", "express"],
+          "content": {
+            "introduction": "REST APIs are easier to use when URLs name resources and verbs name actions. Express makes that mapping a few lines per resource.",
+            "explanation": "One noun-based path per resource — /api/jobs — with GET for reading, POST for creating, PATCH for partial updates, and DELETE for removing. Express Router gives each resource its own file, which you mount on the app at a prefix. This keeps route files small, makes the URL structure readable at a glance, and lets two developers work on different resources without touching the same file.",
+            "examples": [
+              {
+                "title": "A jobs router",
+                "language": "javascript",
+                "code": "import { Router } from \"express\";\n\nconst router = Router();\n\nrouter.get(\"/\", listJobs);\nrouter.post(\"/\", createJob);\nrouter.get(\"/:id\", getJob);\nrouter.patch(\"/:id\", updateJob);\nrouter.delete(\"/:id\", deleteJob);\n\nexport default router;\n\n// server entry\napp.use(\"/api/jobs\", jobsRouter);\napp.use(\"/api/applications\", applicationsRouter);",
+                "walkthrough": "Each verb maps to one operation. Mounting with a prefix composes the full URL, so the router file never needs to know its own path."
+              }
+            ],
+            "useCase": "Any multi-resource backend: jobs, applications, users, and reports each get their own router.",
+            "knowledgeCheck": [
+              {
+                "question": "Which method conventionally creates a new resource?",
+                "type": "mcq",
+                "options": ["POST to the collection URL", "GET with a body", "HEAD only", "TRACE"],
+                "correctIndex": 0,
+                "explanation": "POST to /api/jobs creates a job under the collection."
+              },
+              {
+                "question": "What does app.use(\"/api/jobs\", router) do?",
+                "type": "mcq",
+                "options": ["Disables the router", "Mounts the router at that path prefix", "Serves static files", "Connects to MongoDB"],
+                "correctIndex": 1,
+                "explanation": "Routes defined as \"/\" inside the router then match /api/jobs."
+              }
+            ],
+            "summary": "Noun URLs, verb semantics, one router per resource, mounted from a single entry point."
+          }
+        },
+        {
+          "slug": "validation-and-error-handling",
+          "title": "Validation and Error Handling",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Validate request bodies before handlers run", "Centralize error responses"],
+          "topics": ["validation", "middleware", "errors"],
+          "content": {
+            "introduction": "Never trust the client. Validate at the edge of your API and answer every failure the same way.",
+            "explanation": "A validation middleware runs before your handler and rejects malformed input with a 400, so handlers can assume the body is well-formed. For errors, Express distinguishes normal middleware (3 args) from error middleware (4 args): calling next(err) jumps straight to the error handler, which logs once and returns one consistent JSON shape. That means a database failure and a bad request reach the client in the same format, and the client only needs one error path.",
+            "examples": [
+              {
+                "title": "Validation middleware",
+                "language": "javascript",
+                "code": "function validateBody(schema) {\n  return (req, res, next) => {\n    const result = schema.safeParse(req.body);\n    if (!result.success) {\n      return res.status(400).json({\n        error: \"Invalid request body\",\n        details: result.error.flatten().fieldErrors,\n      });\n    }\n    req.body = result.data; // only validated data moves on\n    next();\n  };\n}\n\nrouter.post(\"/\", validateBody(jobSchema), createJob);",
+                "walkthrough": "The schema checks and normalizes the body once; createJob only ever sees clean data. Registered last, the error middleware catches anything thrown downstream."
+              }
+            ],
+            "useCase": "Every write endpoint: creating jobs, registering users, submitting applications.",
+            "knowledgeCheck": [
+              {
+                "question": "Where should request validation happen?",
+                "type": "mcq",
+                "options": ["In the React component only", "In middleware before the route handler", "In the MongoDB schema only", "In the browser's HTML5 attributes only"],
+                "correctIndex": 1,
+                "explanation": "Client-side checks are UX; server-side validation is the actual security boundary."
+              },
+              {
+                "question": "How does Express recognize an error-handling middleware?",
+                "type": "mcq",
+                "options": ["It is registered before routes", "It takes four arguments: err, req, res, next", "It returns HTML", "Its name starts with 'handle'"],
+                "correctIndex": 1,
+                "explanation": "The four-argument signature is what makes next(err) route to it."
+              }
+            ],
+            "summary": "Validate in middleware, delegate failures with next(err), and answer every error in one consistent shape."
+          }
+        },
+        {
+          "slug": "pagination-and-query-building",
+          "title": "Pagination and Query Building",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Paginate list endpoints", "Whitelist query parameters instead of trusting input"],
+          "topics": ["pagination", "queries", "mongodb"],
+          "content": {
+            "introduction": "List endpoints are where APIs break under load. Bounded pagination and careful query construction keep them fast.",
+            "explanation": "Return a fixed page size with a hard maximum, and always send the total count so clients can render page controls. The critical rule: never pass user input straight into a query. Whitelist the fields a client may filter and sort on, otherwise a crafted ?sort[$ne]=1 can become a MongoDB operator injection. Build the filter from an allowlist of known keys instead.",
+            "examples": [
+              {
+                "title": "Paginated, allowlisted list endpoint",
+                "language": "javascript",
+                "code": "const SORTABLE = { postedAt: 1, title: 1 };\n\nrouter.get(\"/\", async (req, res) => {\n  const page = Math.max(1, Number(req.query.page) || 1);\n  const limit = Math.min(50, Number(req.query.limit) || 20);\n  const filter = req.query.remote === \"true\" ? { remote: true } : {};\n  const sort = SORTABLE[req.query.sort] ? { [req.query.sort]: -1 } : { postedAt: -1 };\n\n  const [items, total] = await Promise.all([\n    Job.find(filter).sort(sort).skip((page - 1) * limit).limit(limit),\n    Job.countDocuments(filter),\n  ]);\n  res.json({ items, total, page, pages: Math.ceil(total / limit) });\n});",
+                "walkthrough": "limit is capped at 50, sort only accepts keys from SORTABLE, and filter is built from fixed values — the client can influence the query but never control its shape."
+              }
+            ],
+            "useCase": "Job boards, search results, feeds, and admin tables — any list that can grow without bound.",
+            "knowledgeCheck": [
+              {
+                "question": "Why cap the page size on a list endpoint?",
+                "type": "mcq",
+                "options": ["To prevent one request from pulling an unbounded amount of data", "To force clients to use GraphQL", "To disable sorting", "To make JSON smaller in the browser"],
+                "correctIndex": 0,
+                "explanation": "An attacker (or a bug) requesting 100000 rows can exhaust memory and connections."
+              },
+              {
+                "question": "What is MongoDB operator injection?",
+                "type": "mcq",
+                "options": ["A performance optimization", "User input interpreted as query operators like $ne", "A connection pooling bug", "A React rendering bug"],
+                "correctIndex": 1,
+                "explanation": "If raw input becomes part of the query object, a client can smuggle in operators; allowlisting prevents it."
+              }
+            ],
+            "summary": "Bound every list with pagination, allowlist filter and sort keys, and return counts alongside items."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "connecting-frontend-backend",
+      "title": "Connecting Frontend and Backend",
+      "description": "Wire React to the API: one shared client, mutations, and optimistic UI.",
+      "order": 3,
+      "estimatedHours": 18,
+      "prerequisites": ["building-api-layer"],
+      "completionCriteria": "Build a React feature that performs full CRUD against the API with correct loading, error, and rollback behavior.",
+      "lessons": [
+        {
+          "slug": "api-client-in-react",
+          "title": "A Shared API Client in React",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Wrap fetch in one reusable client", "Surface loading and error states"],
+          "topics": ["fetch", "api-client", "error-handling"],
+          "content": {
+            "introduction": "Scattering raw fetch calls through components produces duplicated parsing, inconsistent errors, and forgotten status checks. One small client fixes all three.",
+            "explanation": "A shared api() helper prefixes the base path, sets headers, checks res.ok, and throws a typed Error carrying the server's message. Components then handle exactly two outcomes — data or a thrown error — which maps cleanly onto loading and error UI. Centralizing this is also where you later attach an auth token and handle a 401 redirect in exactly one place.",
+            "examples": [
+              {
+                "title": "The api() helper",
+                "language": "javascript",
+                "code": "export async function api(path, options = {}) {\n  const res = await fetch(`/api${path}`, {\n    headers: { \"Content-Type\": \"application/json\" },\n    ...options,\n    body: options.body ? JSON.stringify(options.body) : undefined,\n  });\n  if (!res.ok) {\n    const data = await res.json().catch(() => ({}));\n    throw new Error(data.error || `Request failed (${res.status})`);\n  }\n  return res.status === 204 ? null : res.json();\n}\n\n// usage in a component\nconst jobs = await api(\"/jobs?remote=true\");",
+                "walkthrough": "One place parses errors, one place serializes bodies, one place handles 204s. Components call api() and treat a thrown error as the failure path."
+              }
+            ],
+            "useCase": "Every data operation in the app: lists, detail views, forms, and deletes.",
+            "knowledgeCheck": [
+              {
+                "question": "Why check res.ok instead of relying on try/catch alone?",
+                "type": "mcq",
+                "options": ["fetch does not reject on 4xx/5xx responses", "try/catch cannot be used with async", "res.ok disables caching", "fetch only supports GET"],
+                "correctIndex": 0,
+                "explanation": "A 404 or 500 resolves normally; only a network failure rejects. You must inspect the status yourself."
+              },
+              {
+                "question": "What benefit does a single api() helper provide?",
+                "type": "mcq",
+                "options": ["It removes the need for a backend", "Headers, error parsing, and auth tokens are handled in one place", "It caches every response automatically", "It replaces Express"],
+                "correctIndex": 1,
+                "explanation": "Cross-cutting concerns change once, in one file, for the whole app."
+              }
+            ],
+            "summary": "One fetch wrapper owns headers, serialization, and errors; components only handle data or a thrown error."
+          }
+        },
+        {
+          "slug": "mutations-and-refresh",
+          "title": "Mutations and List Refresh",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Send POST/PATCH/DELETE with JSON bodies", "Update derived state after a mutation"],
+          "topics": ["mutations", "forms", "state"],
+          "content": {
+            "introduction": "Reading data is only half the story. Writes must update the server, then bring the UI back in sync.",
+            "explanation": "A mutation posts a JSON body to your API and then refreshes whatever the server owns. Two details matter: disable the submit button while a request is in flight so a double-click cannot create duplicate records, and reset the form only after success so the user's input survives a failure. After the server confirms, either append the returned document to your list or refetch the list — the server response, not the client draft, is the source of truth.",
+            "examples": [
+              {
+                "title": "Create form with in-flight protection",
+                "language": "jsx",
+                "code": "function JobForm({ onCreated }) {\n  const [draft, setDraft] = useState({ title: \"\", company: \"\" });\n  const [saving, setSaving] = useState(false);\n  const [error, setError] = useState(null);\n\n  async function submit(e) {\n    e.preventDefault();\n    setSaving(true);\n    setError(null);\n    try {\n      const job = await api(\"/jobs\", { method: \"POST\", body: draft });\n      setDraft({ title: \"\", company: \"\" });\n      onCreated(job);\n    } catch (err) {\n      setError(err.message); // draft is kept for retry\n    } finally {\n      setSaving(false);\n    }\n  }\n  /* input value={draft.title} onChange={...} disabled={saving} */\n}",
+                "walkthrough": "saving prevents duplicate submissions, the form clears only on success, and the server's response — not the local draft — is what enters the list."
+              }
+            ],
+            "useCase": "Creating a job, editing a profile, submitting an application — any form that writes to MongoDB.",
+            "knowledgeCheck": [
+              {
+                "question": "Why disable the submit button while a mutation is in flight?",
+                "type": "mcq",
+                "options": ["To make the UI look polished", "To prevent duplicate submissions from double-clicks", "To speed up the request", "Because React requires it"],
+                "correctIndex": 1,
+                "explanation": "Two rapid clicks can otherwise create two records."
+              },
+              {
+                "question": "After a successful create, what should enter the list?",
+                "type": "mcq",
+                "options": ["The document the server returned", "The raw form draft", "A hardcoded placeholder", "The previous list unchanged"],
+                "correctIndex": 0,
+                "explanation": "The server owns ids, timestamps, and defaults — only its response is authoritative."
+              }
+            ],
+            "summary": "Guard against double submits, keep input on failure, and trust the server's response over the local draft."
+          }
+        },
+        {
+          "slug": "optimistic-updates",
+          "title": "Optimistic Updates and Rollbacks",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Apply optimistic updates", "Roll back state when the server rejects the change"],
+          "topics": ["optimistic-ui", "rollback", "state"],
+          "content": {
+            "introduction": "Waiting for the server before rendering makes every click feel slow. Optimistic updates paint the expected result immediately — and require a rollback plan.",
+            "explanation": "The pattern: apply the change to local state, fire the request, and if it fails restore the previous state and surface the error. The important discipline is capturing a snapshot before you mutate, because after the change you can no longer reconstruct what was there. Use optimism for idempotent, low-risk actions like toggles and deletes; skip it when the server must compute the result — a checkout total or a uniqueness check cannot be guessed.",
+            "examples": [
+              {
+                "title": "Delete with snapshot rollback",
+                "language": "javascript",
+                "code": "async function removeJob(id, snapshot) {\n  setJobs((prev) => prev.filter((j) => j.id !== id)); // paint first\n  try {\n    await api(`/jobs/${id}`, { method: \"DELETE\" });\n  } catch (err) {\n    setJobs(snapshot);          // server said no — restore\n    setError(\"Could not delete that job\");\n    throw err;\n  }\n}\n\n// caller keeps a copy before calling\nconst snapshot = jobs;\nremoveJob(id, snapshot).catch(() => {});",
+                "walkthrough": "The row disappears instantly; on a failed delete it reappears exactly as it was, because the pre-change array was captured up front."
+              }
+            ],
+            "useCase": "Star toggles, dismissible notifications, list removals, and status chips.",
+            "knowledgeCheck": [
+              {
+                "question": "What must you capture before applying an optimistic update?",
+                "type": "mcq",
+                "options": ["The previous state, so it can be restored on failure", "The server's IP address", "A new React key", "The user's session token"],
+                "correctIndex": 0,
+                "explanation": "Once local state is mutated, the old value is gone unless you snapshot it."
+              },
+              {
+                "question": "When should you avoid optimistic updates?",
+                "type": "mcq",
+                "options": ["When the server must compute or validate the result", "When the list is short", "When using hooks", "When the app is fast"],
+                "correctIndex": 0,
+                "explanation": "Guessing a result the server must decide — pricing, uniqueness — leads to visible wrong states."
+              }
+            ],
+            "summary": "Paint first, confirm after, roll back from a snapshot on failure — and skip optimism when the server decides the outcome."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "auth-deployment-production",
+      "title": "Auth, Deployment & Production Readiness",
+      "description": "Authentication, route protection, and the hardening needed before you go live.",
+      "order": 4,
+      "estimatedHours": 18,
+      "prerequisites": ["connecting-frontend-backend"],
+      "completionCriteria": "Protect API routes with JWT middleware, handle 401s in the client, and deploy with baseline security and a health check.",
+      "lessons": [
+        {
+          "slug": "jwt-authentication",
+          "title": "Session-Based Auth with JWT",
+          "order": 1,
+          "durationMinutes": 35,
+          "isPreview": true,
+          "objectives": ["Hash passwords and verify them safely", "Issue and validate signed tokens"],
+          "topics": ["jwt", "bcrypt", "authentication"],
+          "content": {
+            "introduction": "Authentication proves who a request belongs to. With stateless JWTs, the server signs a token at login and trusts it later without storing sessions.",
+            "explanation": "Passwords are never stored directly — a bcrypt hash with a per-user salt makes each hash unique even for identical passwords, and verification runs the hash algorithm against the candidate. On successful login the server signs a small JSON payload (subject id, role) with a secret and an expiry. Because verification only needs the secret, no session table is required; the tradeoff is that tokens stay valid until expiry, so keep the lifetime short and plan for revocation.",
+            "examples": [
+              {
+                "title": "Login endpoint that issues a token",
+                "language": "javascript",
+                "code": "import bcrypt from \"bcryptjs\";\nimport jwt from \"jsonwebtoken\";\n\nrouter.post(\"/auth/login\", async (req, res) => {\n  const user = await User.findOne({ email: req.body.email });\n  const ok = user && (await bcrypt.compare(req.body.password, user.passwordHash));\n  if (!ok) return res.status(401).json({ error: \"Invalid credentials\" });\n\n  const token = jwt.sign(\n    { sub: user.id, role: user.role },\n    process.env.JWT_SECRET,\n    { expiresIn: \"1h\" }\n  );\n  res.json({ token, user: { id: user.id, name: user.name } });\n});",
+                "walkthrough": "Both a missing user and a wrong password return the same 401 so attackers cannot probe which emails exist. The token carries only an id and role — never the password hash."
+              }
+            ],
+            "useCase": "Any app with accounts: job boards where applicants and employers have different identities.",
+            "knowledgeCheck": [
+              {
+                "question": "Why store a bcrypt hash instead of the plain password?",
+                "type": "mcq",
+                "options": ["Hashes are faster to compare", "A database leak does not reveal usable passwords", "MongoDB requires it", "It shortens the login response"],
+                "correctIndex": 1,
+                "explanation": "Bcrypt is deliberately slow and salted, so even a stolen table is impractical to crack quickly."
+              },
+              {
+                "question": "Should a login response reveal whether the email exists?",
+                "type": "mcq",
+                "options": ["Yes, to help users debug", "No — return the same error for unknown email and wrong password", "Only for admin accounts", "Yes, on localhost"],
+                "correctIndex": 1,
+                "explanation": "Distinct errors let attackers enumerate valid accounts."
+              }
+            ],
+            "summary": "Hash with bcrypt, sign short-lived tokens with a server secret, and answer login failures uniformly."
+          }
+        },
+        {
+          "slug": "protecting-api-and-client",
+          "title": "Protecting the API and the Client",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Guard routes with auth middleware", "Handle 401s in the React client"],
+          "topics": ["authorization", "middleware", "guards"],
+          "content": {
+            "introduction": "A token is only useful if something checks it. Auth middleware turns a header into a trusted request identity.",
+            "explanation": "requireAuth reads the Authorization: Bearer header, verifies the signature and expiry, and attaches the decoded claims to req.auth before calling next(). Routes mounted behind it can trust req.auth.sub as the caller's id. Roles are checked separately — authentication answers 'who are you', authorization answers 'may you do this'. On the client, a 401 means the token is missing or stale: clear it and redirect to login instead of retrying forever.",
+            "examples": [
+              {
+                "title": "Bearer-token middleware",
+                "language": "javascript",
+                "code": "export function requireAuth(req, res, next) {\n  const header = req.headers.authorization || \"\";\n  const [scheme, token] = header.split(\" \");\n  if (scheme !== \"Bearer\" || !token) {\n    return res.status(401).json({ error: \"Missing token\" });\n  }\n  try {\n    req.auth = jwt.verify(token, process.env.JWT_SECRET);\n    next();\n  } catch {\n    res.status(401).json({ error: \"Invalid or expired token\" });\n  }\n}\n\nrouter.post(\"/jobs\", requireAuth, requireRole(\"employer\"), createJob);",
+                "walkthrough": "Verification failure never reaches the handler. requireRole runs second, so only authenticated employers may create jobs; the client treats any 401 as 'session over'."
+              }
+            ],
+            "useCase": "Write endpoints, user profiles, and anything scoped to the logged-in identity.",
+            "knowledgeCheck": [
+              {
+                "question": "What does requireAuth attach to the request?",
+                "type": "mcq",
+                "options": ["The verified token payload, e.g. req.auth.sub", "A new token", "The MongoDB connection", "The React state"],
+                "correctIndex": 0,
+                "explanation": "Downstream handlers read the caller's id and role from the decoded claims."
+              },
+              {
+                "question": "How should the client respond to a 401 from the API?",
+                "type": "mcq",
+                "options": ["Retry the request in a loop", "Clear the token and redirect to login", "Ignore it and render empty data", "Reload the database"],
+                "correctIndex": 1,
+                "explanation": "401 means the session is gone or expired; retrying cannot fix it."
+              }
+            ],
+            "summary": "Verify tokens in middleware, separate authentication from role checks, and treat 401 as an expired session."
+          }
+        },
+        {
+          "slug": "deployment-and-hardening",
+          "title": "Deployment and Hardening",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Configure production environment variables", "Apply baseline hardening and a health check"],
+          "topics": ["deployment", "security", "observability"],
+          "content": {
+            "introduction": "The gap between 'works locally' and 'safe in production' is mostly configuration: secrets, headers, limits, and a way to know when things break.",
+            "explanation": "Production needs real secrets that never ship in the bundle, a build of the React app served as static files by (or alongside) the API, and browser security headers from helmet. Rate-limit the auth endpoints, because password guessing is a volume attack. A /health endpoint gives your platform something to poll and tells you the process is alive even when traffic is zero. Finally, watch for unhandled promise rejections — in modern Node they terminate the process, so log them deliberately.",
+            "examples": [
+              {
+                "title": "Baseline production setup",
+                "language": "javascript",
+                "code": "import helmet from \"helmet\";\nimport rateLimit from \"express-rate-limit\";\n\napp.use(helmet());\napp.use(\"/api/auth/login\", rateLimit({ windowMs: 15 * 60 * 1000, max: 20 }));\n\napp.use(express.static(path.join(__dirname, \"../client/dist\")));\n\napp.get(\"/health\", (req, res) => {\n  res.json({ ok: true, uptime: process.uptime() });\n});\n\nprocess.on(\"unhandledRejection\", (err) => {\n  console.error(\"unhandled rejection\", err);\n});",
+                "walkthrough": "helmet sets secure response headers, the limiter caps login attempts to 20 per 15 minutes, the built React bundle is served statically, and /health reports liveness for uptime checks."
+              }
+            ],
+            "useCase": "Any deploy target: a VM, a container, or a PaaS where a platform probe hits /health.",
+            "knowledgeCheck": [
+              {
+                "question": "Why rate-limit the login endpoint?",
+                "type": "mcq",
+                "options": ["To save bandwidth", "To slow down password-guessing attacks", "To make responses smaller", "To enable caching"],
+                "correctIndex": 1,
+                "explanation": "Brute force depends on volume; a cap makes it impractical."
+              },
+              {
+                "question": "What is the purpose of a /health endpoint?",
+                "type": "mcq",
+                "options": ["It renders the homepage", "It lets a platform probe confirm the process is alive", "It runs database migrations", "It authenticates users"],
+                "correctIndex": 1,
+                "explanation": "Orchestrators and uptime monitors poll it to decide whether to route traffic or restart the service."
+              }
+            ],
+            "summary": "Real secrets, secure headers, rate-limited auth, a static client build, and a health check you can monitor."
+          }
+        }
+      ]
+    }
+  ]
+}

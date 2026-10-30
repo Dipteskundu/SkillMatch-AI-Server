@@ -1,0 +1,535 @@
+{
+  "slug": "html-css-web-dev",
+  "title": "HTML, CSS, and Web Development Fundamentals",
+  "topic": "Web Development Basics",
+  "category": "Frontend",
+  "level": "beginner",
+  "difficulty": "Beginner",
+  "description": "Learn the building blocks of the web: well-structured semantic HTML, the CSS box model and cascade, responsive layouts with Flexbox and Grid, and the accessibility fundamentals that make pages work for everyone.",
+  "objectives": [
+    "Structure documents with valid, semantic HTML",
+    "Control styling with the box model, cascade, and specificity",
+    "Build responsive layouts with Flexbox, Grid, and media queries",
+    "Apply accessibility fundamentals: labels, focus, contrast, and ARIA"
+  ],
+  "prerequisites": ["No programming experience required", "A text editor and a modern browser"],
+  "estimatedDuration": "6 weeks",
+  "estimatedHours": 48,
+  "tags": ["html", "css", "web-basics", "responsive"],
+  "order": 1,
+  "status": "published",
+  "modules": [
+    {
+      "slug": "semantic-html",
+      "title": "Semantic HTML",
+      "description": "Structure documents with meaningful elements that browsers, search engines, and assistive technology can understand.",
+      "order": 1,
+      "estimatedHours": 10,
+      "prerequisites": [],
+      "completionCriteria": "Build a well-formed page that uses semantic landmarks and correctly labeled form controls.",
+      "lessons": [
+        {
+          "slug": "html-document-structure",
+          "title": "HTML Document Structure",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Write a valid HTML5 document skeleton", "Explain the roles of head and body"],
+          "topics": ["html", "document-structure", "attributes"],
+          "content": {
+            "introduction": "Every web page starts with the same skeleton: a doctype, an html root, a head describing the document, and a body holding what users see.",
+            "explanation": "The doctype puts the browser in standards mode instead of legacy quirks mode. Inside <html>, the <head> carries metadata — character encoding, viewport settings, the tab title, and links to stylesheets and scripts — while the <body> holds everything rendered. Elements are written as paired tags such as <p>...</p>, with attributes as key-value pairs like lang=\"en\"; void elements such as <img> and <meta> have no closing tag. Tags must nest rather than overlap: browsers repair mismatched markup in unpredictable ways, which silently breaks your CSS selectors and scripts later.",
+            "examples": [
+              {
+                "title": "A valid HTML5 page",
+                "language": "html",
+                "code": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>JobMatch AI</title>\n  <link rel=\"stylesheet\" href=\"styles.css\">\n</head>\n<body>\n  <h1>Hello, web</h1>\n  <p>My first page.</p>\n</body>\n</html>",
+                "walkthrough": "The doctype and html tag open the document, head declares encoding, viewport, title and stylesheet, body holds the visible content, and every opened tag is closed in the correct nesting order."
+              }
+            ],
+            "useCase": "The starting file for any static page, and the structure every framework ultimately renders into.",
+            "knowledgeCheck": [
+              {
+                "question": "Which element holds the visible content of a page?",
+                "type": "mcq",
+                "options": ["<body>", "<head>", "<meta>", "<title>"],
+                "correctIndex": 0,
+                "explanation": "The body contains everything rendered; head only carries metadata and resource links."
+              },
+              {
+                "question": "What does <meta charset=\"UTF-8\"> declare?",
+                "type": "mcq",
+                "options": ["The character encoding", "The page title", "The stylesheet URL", "The viewport width"],
+                "correctIndex": 0,
+                "explanation": "It tells the browser which text encoding to use, preventing garbled characters."
+              }
+            ],
+            "summary": "A valid page is doctype, html with head and body, correctly nested elements, and a charset and viewport declared up front."
+          }
+        },
+        {
+          "slug": "semantic-elements",
+          "title": "Semantic Elements and Landmarks",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Choose semantic elements over generic divs", "Identify landmark regions on a page"],
+          "topics": ["semantic-html", "landmarks"],
+          "content": {
+            "introduction": "Semantic elements describe meaning rather than appearance, so machines can interpret your layout the way humans do.",
+            "explanation": "Use <header>, <nav>, <main>, <article>, <section>, <aside>, and <footer> to mark up regions of a page. Screen readers expose these as landmarks, letting keyboard users jump straight to the main content in one keystroke instead of tabbing through every link; search engines likewise weigh structure when indexing. Keep exactly one <main> per page, give each <section> a heading, and reserve <div> and <span> for styling hooks that carry no meaning. An <article> should make sense on its own — a post, a comment, a product card.",
+            "examples": [
+              {
+                "title": "A landmark-based page skeleton",
+                "language": "html",
+                "code": "<header>\n  <nav aria-label=\"Primary\">\n    <a href=\"/\">Home</a>\n    <a href=\"/jobs\">Jobs</a>\n  </nav>\n</header>\n\n<main>\n  <article>\n    <h1>Why semantics matter</h1>\n    <section>\n      <h2>For everyone</h2>\n      <p>Landmarks let assistive tech jump around the page.</p>\n    </section>\n  </article>\n</main>\n\n<footer>\n  <p>&copy; 2026 JobMatch AI</p>\n</footer>",
+                "walkthrough": "Nav, main, article, section and footer each announce a region; the labelled nav disambiguates multiple navigation blocks, and headings give the document an outline."
+              }
+            ],
+            "useCase": "Blog layouts, marketing pages, and dashboards where structure must be understood by more than the browser.",
+            "knowledgeCheck": [
+              {
+                "question": "Which element should contain the page's primary, unique content?",
+                "type": "mcq",
+                "options": ["<main>", "<div>", "<span>", "<aside>"],
+                "correctIndex": 0,
+                "explanation": "Exactly one main landmark holds the dominant content of the page."
+              },
+              {
+                "question": "Why prefer a native <button> over a styled <div> for actions?",
+                "type": "mcq",
+                "options": ["Native elements are focusable and announced by screen readers", "Buttons are faster to style", "Divs cannot contain text", "Buttons need no CSS"],
+                "correctIndex": 0,
+                "explanation": "Native semantics give you keyboard support and correct announcements for free."
+              }
+            ],
+            "summary": "Semantic landmarks convey structure to search engines and assistive tech; keep divs and spans for pure styling."
+          }
+        },
+        {
+          "slug": "forms-and-inputs",
+          "title": "Forms and Inputs",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Associate labels with their inputs", "Choose appropriate input types and attributes"],
+          "topics": ["forms", "input-types", "labels"],
+          "content": {
+            "introduction": "Forms are how pages collect data, and correct markup makes them usable with keyboards, screen readers, and mobile keyboards.",
+            "explanation": "Every input needs a <label> connected through matching for and id attributes: clicking the label focuses the field, and assistive technology announces the label with the current value. Native input types shape the mobile keyboard — type=\"email\" shows @ and . keys — while required and autocomplete add validation and autofill for free. Placeholder text disappears as soon as the user types, so it can never replace a label. Group related choices with <fieldset> and <legend>, and remember that a <button> inside a form defaults to type=\"submit\".",
+            "examples": [
+              {
+                "title": "A labeled signup form",
+                "language": "html",
+                "code": "<form action=\"/signup\" method=\"post\">\n  <label for=\"email\">Email</label>\n  <input id=\"email\" name=\"email\" type=\"email\" required autocomplete=\"email\">\n\n  <label for=\"plan\">Plan</label>\n  <select id=\"plan\" name=\"plan\">\n    <option value=\"free\">Free</option>\n    <option value=\"pro\">Pro</option>\n  </select>\n\n  <fieldset>\n    <legend>Notifications</legend>\n    <label><input type=\"checkbox\" name=\"weekly\"> Weekly digest</label>\n  </fieldset>\n\n  <button type=\"submit\">Create account</button>\n</form>",
+                "walkthrough": "Each control has a real label bound by for/id, email gets browser validation, the checkbox nests its own label, and the fieldset groups notification choices under a legend."
+              }
+            ],
+            "useCase": "Signups, search boxes, checkout flows — any place the page asks the user for data.",
+            "knowledgeCheck": [
+              {
+                "question": "How is a <label> associated with its input?",
+                "type": "mcq",
+                "options": ["The label's for matches the input's id", "Their name attributes match", "They must be adjacent siblings", "The label's class matches the input's class"],
+                "correctIndex": 0,
+                "explanation": "for/id is the binding; it is what makes clicking and announcements work."
+              },
+              {
+                "question": "Why is placeholder text not a replacement for a label?",
+                "type": "mcq",
+                "options": ["It disappears once the user types, hurting usability and accessibility", "It cannot contain spaces", "Only some browsers support it", "It forces the field to be required"],
+                "correctIndex": 0,
+                "explanation": "Users lose sight of what the field is for the moment they start entering data."
+              }
+            ],
+            "summary": "Label every control with for/id, use native input types, and treat placeholder text as a hint, never a label."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "css-box-model",
+      "title": "CSS Layout & Box Model",
+      "description": "Understand how CSS sizes and stacks elements: the box model, the cascade and specificity, and positioning.",
+      "order": 2,
+      "estimatedHours": 12,
+      "prerequisites": ["semantic-html"],
+      "completionCriteria": "Style a page using the box model and specificity rules without unintended style collisions.",
+      "lessons": [
+        {
+          "slug": "the-box-model",
+          "title": "The Box Model",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Describe content, padding, border, and margin", "Apply box-sizing: border-box"],
+          "topics": ["box-model", "box-sizing", "spacing"],
+          "content": {
+            "introduction": "In CSS every element is a rectangle made of four nested layers, and understanding them is the difference between predictable layouts and pixel-chasing.",
+            "explanation": "From the inside out a box has content (text and images), padding (space inside the border), the border itself, and margin (space outside, pushing neighbors away). By default box-sizing is content-box, so width describes only the content area — a 320px element with 16px padding and a 2px border ends up 336px wide. Setting box-sizing: border-box makes width include padding and border, which makes layouts arithmetic you can do in your head. Adjacent vertical margins collapse into a single margin of the larger size, while horizontal margins never collapse.",
+            "examples": [
+              {
+                "title": "Predictable sizing",
+                "language": "css",
+                "code": "* {\n  box-sizing: border-box;\n}\n\n.card {\n  width: 320px; /* includes padding and border */\n  padding: 16px;\n  border: 2px solid #333;\n  margin: 0 auto 24px; /* centers, 24px below */\n}\n\n.card + .card {\n  margin-top: 0; /* adjacent margins collapse */\n}",
+                "walkthrough": "The universal selector flips every element to border-box, so the card stays exactly 320px wide, and margin shorthand gives centering plus a predictable gap."
+              }
+            ],
+            "useCase": "Card layouts, form spacing, and any design where widths must add up across breakpoints.",
+            "knowledgeCheck": [
+              {
+                "question": "With box-sizing: border-box, what does width include?",
+                "type": "mcq",
+                "options": ["Content, padding, and border", "Content only", "Content and margin", "Margin and border"],
+                "correctIndex": 0,
+                "explanation": "border-box folds padding and border into the declared width."
+              },
+              {
+                "question": "What happens to adjacent vertical margins?",
+                "type": "mcq",
+                "options": ["They collapse into a single larger margin", "They add together", "The lower one is ignored", "They are converted to padding"],
+                "correctIndex": 0,
+                "explanation": "Margin collapsing is why vertical rhythm often needs one margin, not two."
+              }
+            ],
+            "summary": "Boxes stack content, padding, border, and margin; border-box sizing and margin collapsing make spacing predictable."
+          }
+        },
+        {
+          "slug": "cascade-and-specificity",
+          "title": "Cascade and Specificity",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Calculate selector specificity", "Resolve conflicting declarations"],
+          "topics": ["selectors", "specificity", "cascade"],
+          "content": {
+            "introduction": "When two rules target the same element, CSS does not error — it picks a winner using a defined set of rules called the cascade.",
+            "explanation": "Declarations are ordered by importance (and origin), then specificity, then source order. Specificity is a three-part score: inline style attributes beat id selectors, which beat class, attribute, and pseudo-class selectors, which beat element and pseudo-element selectors. So #nav always beats .nav, which always beats nav — regardless of where they appear in the file. When scores tie, the rule declared later wins. Inheritance is separate: color and font properties flow down the tree, but most properties (like border) do not. Keep specificity low by styling with classes; they are reusable and easy to override.",
+            "examples": [
+              {
+                "title": "How a winner is chosen",
+                "language": "css",
+                "code": "h1 { color: navy; }            /* 0-0-1 */\n.title { color: teal; }        /* 0-1-0 wins over h1 */\n#page-title { color: red; }    /* 1-0-0 wins over both */\n\nnav a { color: gray; }         /* 0-1-1 */\nnav a.active { color: black; } /* 0-2-1 wins */\n\n/* tie: same specificity, later rule wins */\nbutton { color: white; }\nbutton { color: black; }       /* black applies */",
+                "walkthrough": "Each pair shows a higher specificity score overriding a lower one, while the last two rules tie and resolve by source order."
+              }
+            ],
+            "useCase": "Debugging why a rule 'should work' but doesn't, and designing a stylesheet that stays overrideable.",
+            "knowledgeCheck": [
+              {
+                "question": "Given #nav, .nav, and nav targeting the same element, which wins?",
+                "type": "mcq",
+                "options": ["#nav", ".nav", "nav", "Whichever appears later in the file"],
+                "correctIndex": 0,
+                "explanation": "An id selector scores 1-0-0, higher than class (0-1-0) and element (0-0-1)."
+              },
+              {
+                "question": "What does !important do to a declaration?",
+                "type": "mcq",
+                "options": ["It promotes it above normal cascade rules", "It raises specificity by one point", "It inverts the value", "It makes the rule apply to every element"],
+                "correctIndex": 0,
+                "explanation": "It bypasses normal resolution, so it is a last resort that is hard to override later."
+              }
+            ],
+            "summary": "Cascade order is importance, then specificity, then source order; prefer classes to keep specificity low."
+          }
+        },
+        {
+          "slug": "display-and-positioning",
+          "title": "Display and Positioning",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Choose the right display value", "Layer elements with position and z-index"],
+          "topics": ["display", "position", "z-index"],
+          "content": {
+            "introduction": "Display decides how a box participates in layout; position decides where it sits and what it can layer on top of.",
+            "explanation": "Block boxes stack vertically and take full width; inline boxes flow with text and ignore width and height; inline-block sits between the two; display:none removes the box entirely. position adds another dimension: static is the default, relative offsets an element in place and creates a positioning context, absolute pins it to the nearest positioned ancestor, fixed anchors it to the viewport, and sticky toggles between relative and fixed while scrolling. z-index orders positioned elements along the visual axis — it has no effect on static elements, and it only composes predictably inside a stacking context.",
+            "examples": [
+              {
+                "title": "A badge anchored to a card",
+                "language": "css",
+                "code": ".card {\n  position: relative; /* positioning context for children */\n  padding: 24px;\n}\n\n.badge {\n  position: absolute;\n  top: -8px;\n  right: -8px;\n  z-index: 10;\n}\n\n.sticky-bar {\n  position: sticky;\n  top: 0; /* sticks once scrolled to top */\n}",
+                "walkthrough": "The card becomes the anchor for the absolutely positioned badge, z-index floats it above siblings, and the bar sticks to the viewport top during scroll."
+              }
+            ],
+            "useCase": "Overlays, tooltips, sticky headers, and floating status badges on cards.",
+            "knowledgeCheck": [
+              {
+                "question": "What does position: absolute anchor an element to?",
+                "type": "mcq",
+                "options": ["The nearest positioned ancestor, or the initial containing block", "Always the viewport", "The nearest static ancestor only", "The document root only"],
+                "correctIndex": 0,
+                "explanation": "It walks up to the first ancestor with position other than static."
+              },
+              {
+                "question": "Does z-index work on static elements?",
+                "type": "mcq",
+                "options": ["No, it only applies to positioned elements (and flex/grid children)", "Yes, on every element", "Only with !important", "Only inside iframes"],
+                "correctIndex": 0,
+                "explanation": "Static boxes do not create a layer for z-index to order."
+              }
+            ],
+            "summary": "Display controls flow, position controls placement and layering, and z-index only orders positioned elements."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "responsive-flex-grid",
+      "title": "Responsive Design & Flexbox/Grid",
+      "description": "Make layouts work from phone to desktop with one-dimensional Flexbox, two-dimensional Grid, and media queries.",
+      "order": 3,
+      "estimatedHours": 14,
+      "prerequisites": ["css-box-model"],
+      "completionCriteria": "Rebuild a desktop layout so it works from 320px to 1440px using Flexbox, Grid, and media queries.",
+      "lessons": [
+        {
+          "slug": "flexbox-layout",
+          "title": "Flexbox Layout",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Lay out a row of items with flex", "Control alignment on both axes"],
+          "topics": ["flexbox", "alignment", "flex-wrap"],
+          "content": {
+            "introduction": "Flexbox distributes space along a single axis, which makes it the right tool for toolbars, nav bars, and any row or column of items.",
+            "explanation": "Set display:flex on the container and flex-direction to choose the main axis. justify-content distributes items along that main axis, align-items positions them on the cross axis, and gap adds spacing between them without relying on margin hacks. On the children, flex-grow, flex-shrink, and flex-basis decide how extra or missing space is shared — flex: 1 1 auto is the common shorthand for equally sharing leftover space. flex-wrap: wrap lets items drop to a new line instead of overflowing, which is what makes a flex row responsive.",
+            "examples": [
+              {
+                "title": "A responsive nav bar",
+                "language": "css",
+                "code": ".nav {\n  display: flex;\n  justify-content: space-between; /* main axis */\n  align-items: center;           /* cross axis */\n  gap: 16px;\n  flex-wrap: wrap;\n}\n\n.nav .spacer {\n  flex: 1 1 auto; /* grows to push items apart */\n}",
+                "walkthrough": "Items sit at opposite ends, stay vertically centered, keep a 16px gap, and wrap onto a second line instead of overflowing when space runs out."
+              }
+            ],
+            "useCase": "Navigation bars, button groups, media objects, and centering a single element in a container.",
+            "knowledgeCheck": [
+              {
+                "question": "Which property aligns flex items on the cross axis?",
+                "type": "mcq",
+                "options": ["align-items", "justify-content", "flex-direction", "order"],
+                "correctIndex": 0,
+                "explanation": "justify-content works on the main axis; align-items on the cross axis."
+              },
+              {
+                "question": "What does flex-wrap: wrap do?",
+                "type": "mcq",
+                "options": ["Lets items move to a new line when space runs out", "Wraps text inside each item", "Centers the container", "Disables flex growth"],
+                "correctIndex": 0,
+                "explanation": "Without wrapping, flex items shrink or overflow on narrow screens."
+              }
+            ],
+            "summary": "Flexbox aligns along one axis: justify-content for main, align-items for cross, wrap to survive narrow screens."
+          }
+        },
+        {
+          "slug": "css-grid-layout",
+          "title": "CSS Grid Layout",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Define tracks with grid-template-columns", "Create responsive grids without media queries"],
+          "topics": ["grid", "grid-template", "fr-units"],
+          "content": {
+            "introduction": "Grid lays items out in two dimensions at once, so rows and columns align across an entire page region.",
+            "explanation": "Declare columns with grid-template-columns; rows can follow automatically from content, or be pinned explicitly. The fr unit is a share of the space left after fixed tracks are sized, so 1fr 2fr splits leftover space one-third to two-thirds. The combination repeat(auto-fit, minmax(240px, 1fr)) is the killer feature: cards are at least 240px, fill their track, and reflow into as many columns as fit — no media query required. Items span with grid-column: span 2, and gap works on both axes. Choose Grid when rows and columns must align; use Flexbox for one-dimensional distributions.",
+            "examples": [
+              {
+                "title": "A self-adjusting card grid",
+                "language": "css",
+                "code": ".grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));\n  gap: 24px;\n}\n\n.card--wide {\n  grid-column: span 2; /* occupy two tracks */\n}\n\n/* 1fr = one share of leftover track space */",
+                "walkthrough": "auto-fit with minmax creates as many 240px-or-wider columns as the container allows, gap separates cards, and one card spans two columns for emphasis."
+              }
+            ],
+            "useCase": "Card collections, dashboards, image galleries, and page-level layouts with a sidebar.",
+            "knowledgeCheck": [
+              {
+                "question": "What does the fr unit represent?",
+                "type": "mcq",
+                "options": ["A share of the leftover free space", "A fixed pixel value", "A fraction of the viewport height", "A font size"],
+                "correctIndex": 0,
+                "explanation": "fr distributes whatever space remains after fixed tracks are satisfied."
+              },
+              {
+                "question": "When is Grid usually the better choice?",
+                "type": "mcq",
+                "options": ["Two-dimensional layouts where rows and columns must align", "A single centered row of buttons", "Coloring text", "Animating properties"],
+                "correctIndex": 0,
+                "explanation": "Grid controls both axes together; Flexbox is for one axis at a time."
+              }
+            ],
+            "summary": "Grid defines aligned rows and columns; fr shares space and auto-fit with minmax removes the need for breakpoints."
+          }
+        },
+        {
+          "slug": "media-queries-and-units",
+          "title": "Media Queries and Responsive Units",
+          "order": 3,
+          "durationMinutes": 35,
+          "isPreview": false,
+          "objectives": ["Write mobile-first media queries", "Choose relative units and fluid sizing"],
+          "topics": ["media-queries", "responsive-units", "fluid-layout"],
+          "content": {
+            "introduction": "Responsive design means one page adapts to any viewport, using relative units for sizing and media queries for the few places a layout must change shape.",
+            "explanation": "First declare the viewport meta tag in HTML, or mobile browsers render a zoomed-out desktop page. Then write base styles for small screens and enhance upward with @media (min-width: ...) — that is mobile-first, and it keeps the base CSS free of overrides. Prefer relative units: rem follows the user's root font size (an accessibility win over px), % follows the parent, and vw/vh follow the viewport. clamp(min, preferred, max) produces fluid type and spacing that grows with the viewport without any breakpoint. Choose breakpoints where your content starts to look cramped, not around specific phone models.",
+            "examples": [
+              {
+                "title": "Fluid type with a single breakpoint",
+                "language": "css",
+                "code": "html {\n  font-size: 100%; /* 16px default; rem respects user settings */\n}\n\nh1 {\n  font-size: clamp(1.5rem, 4vw, 2.5rem);\n}\n\n/* mobile-first: base CSS targets small screens */\n@media (min-width: 768px) {\n  .nav-links {\n    display: flex;\n  }\n}",
+                "walkthrough": "The heading scales smoothly between 1.5rem and 2.5rem using viewport units, and the nav only becomes a flex row once there is room for it."
+              }
+            ],
+            "useCase": "Typography scales, navigation that stacks on phones, and layouts that adapt to any screen without device lists.",
+            "knowledgeCheck": [
+              {
+                "question": "What does a mobile-first approach mean?",
+                "type": "mcq",
+                "options": ["Base styles target small screens; min-width queries add enhancements", "You must develop on a physical phone", "Media queries are disabled on desktop", "Desktop styles are written first"],
+                "correctIndex": 0,
+                "explanation": "Small-screen defaults plus upward enhancements produce simpler, faster CSS."
+              },
+              {
+                "question": "Why prefer rem over px for font sizes?",
+                "type": "mcq",
+                "options": ["It respects the user's browser font-size setting", "It always renders larger", "It removes the need for media queries", "It loads fonts faster"],
+                "correctIndex": 0,
+                "explanation": "Users who enlarge default text get larger, readable text with rem-based layouts."
+              }
+            ],
+            "summary": "Declare the viewport, write mobile-first with min-width queries, and use rem and clamp for fluid, accessible sizing."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "accessibility-fundamentals",
+      "title": "Accessibility & Web Fundamentals",
+      "description": "Make pages usable by everyone: meaningful semantics and ARIA, keyboard access and focus, contrast and motion preferences.",
+      "order": 4,
+      "estimatedHours": 12,
+      "prerequisites": ["responsive-flex-grid"],
+      "completionCriteria": "Audit a page for labels, keyboard access, contrast, and ARIA misuse, and fix the issues found.",
+      "lessons": [
+        {
+          "slug": "aria-and-semantics",
+          "title": "Semantics and ARIA",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Use native semantics before reaching for ARIA", "Write alt text and headings correctly"],
+          "topics": ["aria", "screen-readers", "headings"],
+          "content": {
+            "introduction": "Assistive technology reads your markup, not your design — so the structure you write is the experience screen reader users get.",
+            "explanation": "Start with native elements and correct text: one h1 per page with no skipped heading levels, alt text that conveys an image's purpose (alt=\"\" marks a decorative image as ignorable), and labels tied to inputs. ARIA only fills gaps where HTML has no equivalent: aria-expanded on a disclosure, aria-current on the active nav link, aria-describedby for supporting hints. The first rule of ARIA is not to use it when a native element already does the job — a real <button> is announced correctly with zero attributes, while a clickable div needs role, tabindex, and key handlers and still behaves worse.",
+            "examples": [
+              {
+                "title": "Alt text and native controls",
+                "language": "html",
+                "code": "<!-- decorative: nothing to announce -->\n<img src=\"divider.png\" alt=\"\">\n\n<!-- meaningful: describe the content -->\n<img src=\"resume.png\" alt=\"Jane's resume, two pages\">\n\n<!-- native button beats a clickable div -->\n<button type=\"button\" aria-expanded=\"false\">Filters</button>\n\n<p id=\"hint\">We never share your email.</p>\n<input id=\"email\" type=\"email\" aria-describedby=\"hint\">",
+                "walkthrough": "Empty alt hides decoration from screen readers, descriptive alt conveys content, the button exposes its collapsed state automatically, and aria-describedby attaches the privacy hint."
+              }
+            ],
+            "useCase": "Image-heavy articles, disclosure menus, and forms where hints must reach every user.",
+            "knowledgeCheck": [
+              {
+                "question": "What is the first rule of ARIA?",
+                "type": "mcq",
+                "options": ["Do not use ARIA if a native HTML element can do the job", "Always add role attributes", "ARIA replaces alt text", "Put aria-label on every element"],
+                "correctIndex": 0,
+                "explanation": "Native semantics are already implemented correctly by browsers and screen readers."
+              },
+              {
+                "question": "When should an image have alt=\"\"?",
+                "type": "mcq",
+                "options": ["When it is purely decorative and adds no information", "When it fails to load", "Never", "When it is a company logo"],
+                "correctIndex": 0,
+                "explanation": "An empty alt tells assistive tech to skip the image entirely."
+              }
+            ],
+            "summary": "Structure and native elements first, ARIA only to fill real gaps, and alt text that matches the image's purpose."
+          }
+        },
+        {
+          "slug": "keyboard-and-focus",
+          "title": "Keyboard Access and Focus",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Ensure every action works with the keyboard", "Keep focus visibly indicated"],
+          "topics": ["keyboard-navigation", "focus", "tabindex"],
+          "content": {
+            "introduction": "Everything reachable with a mouse must also be reachable with a keyboard, because many users never touch a pointer.",
+            "explanation": "Keyboard users move with Tab and Shift+Tab in DOM order, so keep your markup order meaningful and avoid positive tabindex values, which hijack that order and become impossible to maintain. Native buttons and links fire on Enter and Space, so prefer them over clickable divs — anything you make interactive from scratch must handle role, tabindex, and key events yourself. Focus must be visible: never remove outlines without a replacement, and use :focus-visible so keyboard users get a clear ring while mouse users are not distracted. When a dialog opens, move focus into it and return focus to the trigger when it closes.",
+            "examples": [
+              {
+                "title": "Visible keyboard focus",
+                "language": "css",
+                "code": "/* never remove focus rings without a replacement */\nbutton:focus-visible {\n  outline: 2px solid #2563eb;\n  outline-offset: 2px;\n}\n\na:focus-visible {\n  outline: 2px dashed #b45309;\n}\n\n/* tabindex=\"-1\" keeps an element out of the tab\n   order but still allows focus() from scripts —\n   useful for skip links and dialogs. */",
+                "walkthrough": "focus-visible shows a high-contrast ring only for keyboard interaction, and the comment documents the sanctioned use of tabindex=-1 for programmatic focus."
+              }
+            ],
+            "useCase": "Skip links, custom menus, modal dialogs, and any control built without native elements.",
+            "knowledgeCheck": [
+              {
+                "question": "Why avoid positive tabindex values?",
+                "type": "mcq",
+                "options": ["They override natural DOM order and become hard to maintain", "They slow the page down", "They break CSS selectors", "They are invalid HTML"],
+                "correctIndex": 0,
+                "explanation": "tabindex=1..n forces an artificial order that diverges from the document structure."
+              },
+              {
+                "question": "How should a custom clickable element become keyboard-accessible?",
+                "type": "mcq",
+                "options": ["Use a native <button>, or add role and keyboard handlers", "Add tabindex=\"5\"", "Only add a hover style", "Wrap it in an iframe"],
+                "correctIndex": 0,
+                "explanation": "A real button gets focus, Enter/Space activation, and announcements for free."
+              }
+            ],
+            "summary": "Follow DOM order, use native interactive elements, and always show a visible focus indicator."
+          }
+        },
+        {
+          "slug": "contrast-and-motion",
+          "title": "Color, Contrast, and Motion",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Check WCAG contrast ratios", "Respect user motion preferences and announce errors"],
+          "topics": ["contrast", "reduced-motion", "inclusive-design"],
+          "content": {
+            "introduction": "Small design decisions — contrast, color choices, motion, and how errors are announced — decide whether a page works for people with visual or motor differences.",
+            "explanation": "WCAG AA requires a contrast ratio of at least 4.5:1 for normal text and 3:1 for large text (24px, or 18.5px bold), measured against the background. Color must never be the only signal: pair status colors with icons, text, or patterns so color-blind users can tell success from failure. Respect the operating system's motion setting with prefers-reduced-motion to disable non-essential animation. For forms, announce errors with role=\"alert\" or an aria-live region so they reach users who cannot see the field turn red, and keep interactive targets large enough to tap reliably.",
+            "examples": [
+              {
+                "title": "Contrast-checked palette with reduced motion",
+                "language": "css",
+                "code": ":root {\n  /* contrast ratios measured against white */\n  --text: #1a1a1a;    /* 17:1 */\n  --muted: #595959;   /* 7:1  */\n  --accent: #b45309;  /* 5:1  */\n}\n\n@media (prefers-reduced-motion: reduce) {\n  * {\n    animation-duration: 0.01ms !important;\n    transition-duration: 0.01ms !important;\n  }\n}",
+                "walkthrough": "Every text color clears AA against white, and the media query collapses animation timings for users who asked their system for less motion."
+              }
+            ],
+            "useCase": "Design systems, form validation, marketing pages with animation, and status indicators.",
+            "knowledgeCheck": [
+              {
+                "question": "What contrast ratio does WCAG AA require for normal text?",
+                "type": "mcq",
+                "options": ["4.5:1", "2:1", "3:1", "10:1"],
+                "correctIndex": 0,
+                "explanation": "3:1 applies to large text; normal text needs at least 4.5:1."
+              },
+              {
+                "question": "What does prefers-reduced-motion do?",
+                "type": "mcq",
+                "options": ["Lets CSS skip animations for users who request less motion", "Disables JavaScript timers", "Shrinks image file sizes", "Speeds up all transitions"],
+                "correctIndex": 0,
+                "explanation": "It is the media query hook for the OS-level reduced-motion setting."
+              }
+            ],
+            "summary": "Meet contrast thresholds, never encode meaning in color alone, respect reduced motion, and announce errors programmatically."
+          }
+        }
+      ]
+    }
+  ]
+}

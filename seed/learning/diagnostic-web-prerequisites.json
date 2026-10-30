@@ -1,0 +1,126 @@
+{
+  "slug": "diagnostic-web-prerequisites",
+  "type": "diagnostic",
+  "title": "Web Development Prerequisites",
+  "description": "A short baseline check of HTML, CSS, and JavaScript fundamentals — the shared prerequisite for most Learning Hub paths. Skipping this leaves your self-reported proficiency unverified.",
+  "status": "active",
+  "skill": "Web Development",
+  "estimatedMinutes": 8,
+  "questions": [
+    {
+      "order": 1,
+      "topic": "HTML Semantics",
+      "question": "Which element should wrap the dominant, unique content of a web page?",
+      "options": ["<div>", "<main>", "<section>", "<article>"],
+      "correctIndex": 1,
+      "explanation": "<main> holds the page's primary content and must not be repeated across the document. <div> has no semantics, <section> groups thematic content, and <article> is for self-contained compositions."
+    },
+    {
+      "order": 2,
+      "topic": "HTML Semantics",
+      "question": "Which markup gives screen-reader users a text description of an image?",
+      "options": [
+        "<img src=\"cat.png\" title=\"A cat\">",
+        "<img src=\"cat.png\" description=\"A cat\">",
+        "<img src=\"cat.png\" alt=\"A cat\">",
+        "<img src=\"cat.png\" aria-label=\"A cat\" />"
+      ],
+      "correctIndex": 2,
+      "explanation": "alt is the correct attribute for describing an image's meaning. title only adds a tooltip and is unreliable for assistive tech, description is not a valid attribute, and aria-label is meant for elements with no text equivalent at all."
+    },
+    {
+      "order": 3,
+      "topic": "CSS Layout",
+      "question": "How do you horizontally centre a block-level element that has a fixed width?",
+      "options": [
+        "text-align: center",
+        "margin: 0 auto",
+        "align-items: center",
+        "justify-self: middle"
+      ],
+      "correctIndex": 1,
+      "explanation": "auto left/right margins split the remaining space equally. text-align centres inline content inside the element, align-items works inside flex/grid, and justify-self is not a valid value (it takes start/center/end)."
+    },
+    {
+      "order": 4,
+      "topic": "CSS Layout",
+      "question": "On a flex container, which property distributes space along the main axis?",
+      "options": ["align-items", "justify-content", "align-content", "place-items"],
+      "correctIndex": 1,
+      "explanation": "justify-content acts on the main axis. align-items works on the cross axis, align-content only affects wrapped lines, and place-items is the align-items/text-align shorthand."
+    },
+    {
+      "order": 5,
+      "topic": "CSS Layout",
+      "question": "What is the key difference between display: none and visibility: hidden?",
+      "options": [
+        "They are equivalent",
+        "none keeps the space but hides the paint",
+        "none removes the element from the layout entirely",
+        "hidden removes the element from the DOM"
+      ],
+      "correctIndex": 2,
+      "explanation": "display: none removes the box, so following content reflows into the gap. visibility: hidden keeps the space occupied. Neither removes the node from the DOM."
+    },
+    {
+      "order": 6,
+      "topic": "JavaScript Basics",
+      "question": "What is the difference between == and === in JavaScript?",
+      "options": [
+        "They behave identically",
+        "=== compares value only",
+        "== avoids type conversion, === converts",
+        "== coerces types before comparing; === does not"
+      ],
+      "correctIndex": 3,
+      "explanation": "== converts operands to a common type first, so \"1\" == 1 is true. === requires both value and type to match, so \"1\" === 1 is false. Prefer === to avoid surprise results."
+    },
+    {
+      "order": 7,
+      "topic": "JavaScript Basics",
+      "question": "Which declaration is confined to the block it is declared in?",
+      "options": ["var", "let and const", "function", "static"],
+      "correctIndex": 1,
+      "explanation": "let and const are block-scoped. var is function-scoped and hoisted, which is why it produces surprising results inside loops and conditionals."
+    },
+    {
+      "order": 8,
+      "topic": "JavaScript Basics",
+      "question": "What does Array.prototype.map() return?",
+      "options": [
+        "The same array, mutated",
+        "undefined",
+        "A new array of the same length with transformed values",
+        "A single accumulated value"
+      ],
+      "correctIndex": 2,
+      "explanation": "map always returns a new array with one result per input element. reduce() is what accumulates to a single value, and forEach() returns undefined."
+    },
+    {
+      "order": 9,
+      "topic": "DOM",
+      "question": "What does event.preventDefault() do inside a form submit handler?",
+      "options": [
+        "Stops the handler from running again",
+        "Stops the event bubbling to parent elements",
+        "Cancels the browser's default action (the native submit/navigation)",
+        "Removes the form from the page"
+      ],
+      "correctIndex": 2,
+      "explanation": "preventDefault() cancels the default behaviour, such as a native form submission and page reload. stopPropagation() is what prevents bubbling, and stopImmediatePropagation() also blocks other listeners on the same element."
+    },
+    {
+      "order": 10,
+      "topic": "DOM",
+      "question": "Which selector method returns a NodeList of every match?",
+      "options": [
+        "document.querySelector()",
+        "document.querySelectorAll()",
+        "document.getElementById()",
+        "document.getElementsByClassName() returns a single element"
+      ],
+      "correctIndex": 1,
+      "explanation": "querySelectorAll returns all matches as a static NodeList. querySelector returns only the first match, getElementById returns one element, and getElementsByClassName returns a live HTMLCollection rather than one element."
+    }
+  ]
+}

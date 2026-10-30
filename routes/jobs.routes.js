@@ -5,7 +5,6 @@ import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
 import { analyzeSkillGap } from "../services/skillGapService.js";
-import { getFirebaseService } from "../services/firebaseService.js";
 
 const router = express.Router();
 
@@ -113,54 +112,47 @@ router.post("/api/jobs", async (req, res) => {
       },
     });
 
-    // 6️⃣ Send real-time match notifications in background
-    const firebaseService = getFirebaseService();
-    if (firebaseService) {
-      setImmediate(async () => {
-        try {
-          const requiredSkills = (newJob.skills || []).map((s) =>
-            s.toLowerCase().trim(),
-          );
-          if (requiredSkills.length > 0) {
-            const users = await db
-              .collection("users")
-              .find({ role: { $ne: "recruiter" } })
-              .toArray();
-            for (const candidate of users) {
-              const candidateSkills = (candidate.skills || []).map((s) =>
-                s.toLowerCase().trim(),
-              );
-              if (!candidateSkills.length) continue;
+    // 6️⃣ Persist match notifications for matching candidates (background)
+    setImmediate(async () => {
+      try {
+        const requiredSkills = (newJob.skills || []).map((s) =>
+          s.toLowerCase().trim(),
+        );
+        if (requiredSkills.length > 0) {
+          const users = await db
+            .collection("users")
+            .find({ role: { $ne: "recruiter" } })
+            .toArray();
+          for (const candidate of users) {
+            const candidateSkills = (candidate.skills || []).map((s) =>
+              s.toLowerCase().trim(),
+            );
+            if (!candidateSkills.length) continue;
 
-              const matching = requiredSkills.filter((s) =>
-                candidateSkills.includes(s),
-              );
-              const fitScore = (matching.length / requiredSkills.length) * 100;
+            const matching = requiredSkills.filter((s) =>
+              candidateSkills.includes(s),
+            );
+            const fitScore = (matching.length / requiredSkills.length) * 100;
 
-              if (fitScore >= 70 && candidate.firebaseUid) {
-                const notifObj = {
-                  userId: candidate.firebaseUid,
-                  type: "job_posted",
-                  jobId: result.insertedId,
-                  jobTitle: newJob.title,
-                  company: newJob.company,
-                  message: `New job match (${Math.round(fitScore)}% Fit): ${newJob.title} at ${newJob.company}`,
-                  read: false,
-                  createdAt: new Date(),
-                };
-                await db.collection("notifications").insertOne(notifObj);
-                await firebaseService.sendNotification(
-                  candidate.firebaseUid,
-                  notifObj,
-                );
-              }
+            if (fitScore >= 70 && candidate.firebaseUid) {
+              const notifObj = {
+                userId: candidate.firebaseUid,
+                type: "job_posted",
+                jobId: result.insertedId,
+                jobTitle: newJob.title,
+                company: newJob.company,
+                message: `New job match (${Math.round(fitScore)}% Fit): ${newJob.title} at ${newJob.company}`,
+                read: false,
+                createdAt: new Date(),
+              };
+              await db.collection("notifications").insertOne(notifObj);
             }
           }
-        } catch (err) {
-          console.error("Job match notification error:", err);
         }
-      });
-    }
+      } catch (err) {
+        console.error("Job match notification error:", err);
+      }
+    });
   } catch (error) {
     console.error("POST Job Error:", error);
 
@@ -337,58 +329,45 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
       id: result.insertedId,
     });
 
-    // Notify recruiter & Update applicant count real-time in background
-    if (firebaseService) {
-      setImmediate(async () => {
-        try {
-          // Get job document to find exact title and possibly the company
-          const jobDoc = await db
-            .collection("find_jobs")
-            .findOne({ _id: new ObjectId(id) });
-          const actualTitle = jobTitle || jobDoc?.title || "a job";
-          const actualCompany = company || jobDoc?.company || "";
+    // Notify recruiter in background
+    setImmediate(async () => {
+      try {
+        // Get job document to find exact title and possibly the company
+        const jobDoc = await db
+          .collection("find_jobs")
+          .findOne({ _id: new ObjectId(id) });
+        const actualTitle = jobTitle || jobDoc?.title || "a job";
+        const actualCompany = company || jobDoc?.company || "";
 
-          const numApplicants = await applications.countDocuments({
-            jobId: new ObjectId(id),
+        // Find Recruiter and notify
+        if (actualCompany) {
+          // Try to match recruiter by company name or display name
+          const recruiter = await db.collection("users").findOne({
+            $or: [
+              { companyName: actualCompany },
+              { displayName: actualCompany },
+            ],
+            role: "recruiter",
           });
 
-          // 1. Update Realtime Firebase Applicant Count
-          await firebaseService.updateApplicantCount(id, numApplicants);
-
-          // 2. Find Recruiter and notify
-          if (actualCompany) {
-            // Try to match recruiter by company name or display name
-            const recruiter = await db.collection("users").findOne({
-              $or: [
-                { companyName: actualCompany },
-                { displayName: actualCompany },
-              ],
-              role: "recruiter",
-            });
-
-            if (recruiter && recruiter.firebaseUid) {
-              const notifObj = {
-                userId: recruiter.firebaseUid,
-                type: "job_applied",
-                applicationId: result.insertedId,
-                jobId: new ObjectId(id),
-                jobTitle: actualTitle,
-                message: `New Application: ${email} applied for ${actualTitle}.`,
-                read: false,
-                createdAt: new Date(),
-              };
-              await db.collection("notifications").insertOne(notifObj);
-              await firebaseService.sendNotification(
-                recruiter.firebaseUid,
-                notifObj,
-              );
-            }
+          if (recruiter && recruiter.firebaseUid) {
+            const notifObj = {
+              userId: recruiter.firebaseUid,
+              type: "job_applied",
+              applicationId: result.insertedId,
+              jobId: new ObjectId(id),
+              jobTitle: actualTitle,
+              message: `New Application: ${email} applied for ${actualTitle}.`,
+              read: false,
+              createdAt: new Date(),
+            };
+            await db.collection("notifications").insertOne(notifObj);
           }
-        } catch (err) {
-          console.error("Application notification error:", err);
         }
-      });
-    }
+      } catch (err) {
+        console.error("Application notification error:", err);
+      }
+    });
   } catch (error) {
     console.error("APPLY Job Error:", error);
     res.status(500).json({

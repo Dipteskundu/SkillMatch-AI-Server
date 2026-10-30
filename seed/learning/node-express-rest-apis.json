@@ -1,0 +1,536 @@
+{
+  "slug": "node-express-rest-apis",
+  "title": "Node.js, Express.js, and REST APIs",
+  "topic": "Backend Development",
+  "category": "Backend",
+  "level": "intermediate",
+  "difficulty": "Intermediate",
+  "description": "Master the Node.js runtime, build web servers with Express routing and middleware, and design secure, well-tested REST APIs with proper status codes, validation, and error handling.",
+  "objectives": [
+    "Explain the Node.js event loop and write non-blocking asynchronous code",
+    "Structure Node.js applications with modules, npm, and package.json",
+    "Build Express servers with routing, middleware, and error handling",
+    "Design RESTful resources with correct methods, status codes, and idempotency",
+    "Validate input, secure endpoints, and test APIs with Supertest"
+  ],
+  "prerequisites": ["JavaScript ES6+", "Basic HTTP knowledge", "Familiarity with the command line"],
+  "estimatedDuration": "7 weeks",
+  "estimatedHours": 56,
+  "tags": ["nodejs", "express", "rest", "api"],
+  "order": 4,
+  "status": "published",
+  "modules": [
+    {
+      "slug": "node-runtime-essentials",
+      "title": "Node.js Runtime Essentials",
+      "description": "How Node runs JavaScript outside the browser: the event loop, modules, and asynchronous patterns.",
+      "order": 1,
+      "estimatedHours": 14,
+      "prerequisites": [],
+      "completionCriteria": "Write a script that performs concurrent async work and handles failures without blocking the event loop.",
+      "lessons": [
+        {
+          "slug": "event-loop-and-non-blocking-io",
+          "title": "The Event Loop and Non-Blocking I/O",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Explain why Node is single-threaded yet concurrent", "Predict execution order of timers and microtasks"],
+          "topics": ["event-loop", "async"],
+          "content": {
+            "introduction": "Node.js runs JavaScript on a single thread but handles many connections at once by never waiting for slow work — it delegates I/O to the OS and continues running other code.",
+            "explanation": "When you call an asynchronous API like fs.readFile, Node hands the operation to a libuv worker and returns immediately, registering a callback for later. Once the work finishes, the event loop places the callback in a queue and runs it when the main call stack is empty. This is why ordering surprises beginners: synchronous code always runs first, then microtasks (promises), then timers in registration order. Blocking the stack with a heavy loop freezes every pending callback, so long CPU work must be chunked or moved off the main thread.",
+            "examples": [
+              {
+                "title": "Execution order of sync, timer, and promise code",
+                "language": "javascript",
+                "code": "console.log(\"start\");\n\nsetTimeout(() => console.log(\"timeout\"), 0);\n\nPromise.resolve().then(() => console.log(\"promise\"));\n\nconsole.log(\"end\");\n\n// Output:\n// start\n// end\n// promise\n// timeout",
+                "walkthrough": "The two sync logs run first, the promise microtask beats the zero-delay timer, and the timer runs last once the stack is empty."
+              }
+            ],
+            "useCase": "Serving thousands of concurrent HTTP connections from a single process without a thread per request.",
+            "knowledgeCheck": [
+              {
+                "question": "Why can Node handle many concurrent connections with one thread?",
+                "type": "mcq",
+                "options": ["It offloads I/O to the OS and runs callbacks later on the event loop", "It spawns one thread per request", "It runs JavaScript in parallel threads", "It blocks until every request finishes"],
+                "correctIndex": 0,
+                "explanation": "Non-blocking I/O means the thread never waits; callbacks run when results arrive."
+              },
+              {
+                "question": "What is the output of the example?",
+                "type": "mcq",
+                "options": ["start, end, promise, timeout", "start, timeout, promise, end", "promise, start, end, timeout", "start, end, timeout, promise"],
+                "correctIndex": 0,
+                "explanation": "Sync logs finish first, then promise microtasks, then timers."
+              }
+            ],
+            "summary": "Node is single-threaded and non-blocking: I/O goes to the OS, callbacks run on the event loop, and microtasks precede timers."
+          }
+        },
+        {
+          "slug": "modules-npm-and-package-json",
+          "title": "Modules, npm, and package.json",
+          "order": 2,
+          "durationMinutes": 25,
+          "isPreview": false,
+          "objectives": ["Split code across files with CommonJS or ESM", "Manage dependencies with npm and package.json"],
+          "topics": ["modules", "npm"],
+          "content": {
+            "introduction": "Node gives you a module system for splitting code and npm for sharing it — together they keep a codebase navigable and its dependencies explicit.",
+            "explanation": "CommonJS uses require to load and module.exports to expose, and it resolves synchronously from the filesystem. ES modules use import/export, require \"type\": \"module\" in package.json (or an .mjs extension), and are parsed statically so imports are hoisted. package.json is the contract for your project: name, entry point, scripts, and dependencies. A dependency in \"dependencies\" ships to production; one in \"devDependencies\" (test runners, linters) is only needed at build time — putting a tool in the wrong bucket bloats your deployment.",
+            "examples": [
+              {
+                "title": "Exporting and consuming a module",
+                "language": "javascript",
+                "code": "// config.js\nmodule.exports = {\n  port: process.env.PORT || 3000,\n  env: process.env.NODE_ENV || \"development\",\n};\n\n// server.js\nconst config = require(\"./config\");\n\nfunction start() {\n  console.log(`listening on :${config.port} in ${config.env}`);\n}\n\nmodule.exports = { start };",
+                "walkthrough": "config.js exports a plain object; server.js requires it by relative path and exports its own function, keeping each file focused."
+              }
+            ],
+            "useCase": "Any project larger than a single file: shared utilities, route handlers, and configuration split into modules.",
+            "knowledgeCheck": [
+              {
+                "question": "Where does a package used only for unit tests belong?",
+                "type": "mcq",
+                "options": ["devDependencies", "dependencies", "peerDependencies only", "Outside package.json"],
+                "correctIndex": 0,
+                "explanation": "Test runners are build-time tools and should not ship to production."
+              },
+              {
+                "question": "Which pair of keywords is used in CommonJS?",
+                "type": "mcq",
+                "options": ["require and module.exports", "import and export default", "include and expose", "load and send"],
+                "correctIndex": 0,
+                "explanation": "CommonJS loads with require and exposes values via module.exports."
+              }
+            ],
+            "summary": "Modules split code; npm manages dependencies. Keep runtime and dev dependencies in the right package.json bucket."
+          }
+        },
+        {
+          "slug": "promises-async-await-and-errors",
+          "title": "Promises, async/await, and Error Handling",
+          "order": 3,
+          "durationMinutes": 35,
+          "isPreview": false,
+          "objectives": ["Write async functions with try/catch", "Run independent work concurrently with Promise.all"],
+          "topics": ["promises", "async-await"],
+          "content": {
+            "introduction": "Promises represent a value that arrives later; async/await lets you write that asynchronous flow like straight-line code.",
+            "explanation": "An async function always returns a promise, and await pauses that function (not the thread) until the promise settles. Rejections thrown inside async functions become rejected promises, so a plain try/catch around await works — but a catch that swallows the error hides failures; rethrow or log and translate it into a response. When operations are independent, start them all before awaiting so they run concurrently: awaiting sequentially turns what could be one round trip into several.",
+            "examples": [
+              {
+                "title": "Concurrent fetches with error handling",
+                "language": "javascript",
+                "code": "async function loadDashboard(userId) {\n  try {\n    const [user, jobs, matches] = await Promise.all([\n      fetchUser(userId),\n      fetchJobs(),\n      fetchMatches(userId),\n    ]);\n    return { user, jobs, matches };\n  } catch (err) {\n    console.error(\"dashboard load failed\", err);\n    throw new Error(\"Could not load dashboard\");\n  }\n}\n\n// Sequential (slow) instead:\n// const user = await fetchUser(userId);\n// const jobs = await fetchJobs();",
+                "walkthrough": "Promise.all starts all three requests immediately and rejects if any fails; the original error is logged before a safe error is rethrown."
+              }
+            ],
+            "useCase": "API gateways and dashboards that aggregate several backend calls into one response.",
+            "knowledgeCheck": [
+              {
+                "question": "What does await pause?",
+                "type": "mcq",
+                "options": ["Only the current async function, not the event loop", "The entire Node process", "All other promises", "The operating system"],
+                "correctIndex": 0,
+                "explanation": "Other callbacks keep running while one function waits on a promise."
+              },
+              {
+                "question": "Why start independent promises before awaiting them?",
+                "type": "mcq",
+                "options": ["So they execute concurrently instead of one after another", "So they run on separate threads", "To avoid using promises", "To make errors impossible"],
+                "correctIndex": 0,
+                "explanation": "Awaiting sequentially serializes work that could overlap."
+              }
+            ],
+            "summary": "async/await makes asynchronous code readable. Start independent work first, and never swallow rejections."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "express-routing-and-middleware",
+      "title": "Express Routing & Middleware",
+      "description": "Map URLs to handlers and organize request processing as a chain of middleware.",
+      "order": 2,
+      "estimatedHours": 14,
+      "prerequisites": ["node-runtime-essentials"],
+      "completionCriteria": "Build an Express app with parameterized routes, a reusable middleware chain, and centralized error handling.",
+      "lessons": [
+        {
+          "slug": "routes-params-and-handlers",
+          "title": "Routes, Params, and Route Handlers",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Declare routes for HTTP methods", "Read path, query, and body parameters"],
+          "topics": ["routing", "express"],
+          "content": {
+            "introduction": "A route pairs an HTTP method and a URL pattern with a handler function that produces the response.",
+            "explanation": "Express matches incoming requests in registration order: app.get(\"/jobs/:id\", handler) fires only for GET requests whose path fits the pattern. Params come from the path (req.params.id), filters from the query string (req.query), and payloads from the body (req.body) — the body is only populated after express.json() parses it. Because matching is sequential, put specific routes like /jobs/featured before generic ones like /jobs/:id, or the parameterized route will swallow them.",
+            "examples": [
+              {
+                "title": "A parameterized route",
+                "language": "javascript",
+                "code": "const express = require(\"express\");\nconst app = express();\n\napp.use(express.json());\n\napp.get(\"/jobs/:id\", (req, res) => {\n  const job = findJob(req.params.id);\n  if (!job) return res.status(404).json({ error: \"Job not found\" });\n  res.json(job);\n});\n\napp.post(\"/jobs\", (req, res) => {\n  const job = createJob(req.body);\n  res.status(201).location(`/jobs/${job.id}`).json(job);\n});\n\napp.listen(3000);",
+                "walkthrough": "req.params.id reads the path segment, express.json() enables body parsing, and the POST handler answers 201 with a Location header."
+              }
+            ],
+            "useCase": "Any CRUD API where each resource has a collection URL and a per-item URL.",
+            "knowledgeCheck": [
+              {
+                "question": "Where does req.params come from?",
+                "type": "mcq",
+                "options": ["Dynamic segments of the URL path", "The request body", "Response headers", "Environment variables"],
+                "correctIndex": 0,
+                "explanation": "Placeholders like :id are extracted into req.params."
+              },
+              {
+                "question": "Why is express.json() needed before reading req.body?",
+                "type": "mcq",
+                "options": ["It parses the JSON payload into a JavaScript object", "It validates the request", "It compresses the response", "It logs the request"],
+                "correctIndex": 0,
+                "explanation": "Without a body parser, req.body is undefined for JSON requests."
+              }
+            ],
+            "summary": "Routes match method plus path. Read params from the path, query from the URL, and body only after parsing middleware."
+          }
+        },
+        {
+          "slug": "the-middleware-pipeline",
+          "title": "The Middleware Pipeline",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Explain the (req, res, next) contract", "Write and mount reusable middleware"],
+          "topics": ["middleware", "cross-cutting-concerns"],
+          "content": {
+            "introduction": "Middleware functions run in sequence between the request and the response — logging, auth, parsing, and finally your handler.",
+            "explanation": "Each middleware receives req, res, and next, and must either end the response or call next() to pass control onward; forgetting next() stalls the request until it times out. Middleware can be mounted app-wide, per router, or on a single route, which lets you apply expensive checks only where they matter. This pipeline is where cross-cutting concerns live: one logger for every request, one auth check for protected routes, one CORS policy for the whole API.",
+            "examples": [
+              {
+                "title": "A request logger and a mounted router",
+                "language": "javascript",
+                "code": "function requestLogger(req, res, next) {\n  const start = Date.now();\n  res.on(\"finish\", () => {\n    console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);\n  });\n  next();\n}\n\napp.use(requestLogger);\n\nfunction requireApiKey(req, res, next) {\n  if (req.get(\"x-api-key\") !== process.env.API_KEY) {\n    return res.status(401).json({ error: \"Invalid API key\" });\n  }\n  next();\n}\n\napp.use(\"/jobs\", requireApiKey, jobsRouter);",
+                "walkthrough": "requestLogger passes control on and measures after the response finishes; requireApiKey stops unauthorized requests before the router runs."
+              }
+            ],
+            "useCase": "Request logging, authentication, rate limiting, and CORS applied consistently across an API.",
+            "knowledgeCheck": [
+              {
+                "question": "What must a middleware do to continue the chain?",
+                "type": "mcq",
+                "options": ["Call next()", "Send a JSON response", "Return a promise", "Throw an error"],
+                "correctIndex": 0,
+                "explanation": "Without next(), the request never reaches later handlers."
+              },
+              {
+                "question": "Where should a check that applies only to /jobs routes be mounted?",
+                "type": "mcq",
+                "options": ["On that router or route, not app-wide", "Globally before all routes", "Inside the response", "In package.json"],
+                "correctIndex": 0,
+                "explanation": "Scoped mounting avoids running the check for unrelated endpoints."
+              }
+            ],
+            "summary": "Middleware runs in order and must call next() or respond. Mount each concern at the narrowest scope that fits."
+          }
+        },
+        {
+          "slug": "error-handling-in-express",
+          "title": "Error Handling in Express",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Use four-argument error middleware", "Translate thrown errors into HTTP responses"],
+          "topics": ["errors", "express"],
+          "content": {
+            "introduction": "Express treats any function with four parameters — (err, req, res, next) — as an error handler, and jumps to it as soon as an error occurs.",
+            "explanation": "Calling next(err) anywhere in the chain skips remaining normal middleware and lands in the first error handler, which should log the real error and respond with a generic message so internals never leak to clients. Async handlers need extra care: a rejected promise inside a handler is not automatically routed to Express, so either wrap the handler or let Express 5 handle rejected promises natively. Keep exactly one centralized error handler at the end of the app so every failure produces the same response shape.",
+            "examples": [
+              {
+                "title": "Centralized error handler",
+                "language": "javascript",
+                "code": "app.use((req, res, next) => {\n  next(new Error(\"Route not found\"));\n});\n\n// Must be registered after all routes\napp.use((err, req, res, next) => {\n  console.error(err);\n  const status = err.status || 500;\n  res.status(status).json({\n    error: status === 500 ? \"Internal server error\" : err.message,\n  });\n});",
+                "walkthrough": "Unknown routes fall through to next(err); the four-argument handler logs the stack but only exposes a safe message to the client."
+              }
+            ],
+            "useCase": "Turning validation failures, missing records, and unexpected crashes into consistent JSON error responses.",
+            "knowledgeCheck": [
+              {
+                "question": "How does Express recognize an error-handling middleware?",
+                "type": "mcq",
+                "options": ["It takes four arguments: err, req, res, next", "It is named handleError", "It returns a rejected promise", "It is registered first"],
+                "correctIndex": 0,
+                "explanation": "The four-parameter signature is what distinguishes it from normal middleware."
+              },
+              {
+                "question": "What should a 500-level response expose to the client?",
+                "type": "mcq",
+                "options": ["A generic message; details stay in server logs", "The full stack trace", "The database query", "Nothing — close the connection"],
+                "correctIndex": 0,
+                "explanation": "Internal details can reveal schema, paths, and vulnerabilities."
+              }
+            ],
+            "summary": "next(err) jumps to the four-argument handler. Log details server-side, return one consistent error shape."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "designing-rest-apis",
+      "title": "Designing REST APIs",
+      "description": "Model resources, choose methods and status codes correctly, and expose large collections responsibly.",
+      "order": 3,
+      "estimatedHours": 14,
+      "prerequisites": ["express-routing-and-middleware"],
+      "completionCriteria": "Design a resource-oriented API with correct verbs, status codes, pagination, and a versioning strategy.",
+      "lessons": [
+        {
+          "slug": "rest-constraints-and-resources",
+          "title": "REST Constraints and Resource Design",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Define resources as nouns in the URL", "Apply REST constraints to endpoint design"],
+          "topics": ["rest", "resource-design"],
+          "content": {
+            "introduction": "REST models an API as a collection of resources — things with identity — rather than as a set of procedures.",
+            "explanation": "In REST, the URL identifies a resource (a noun) and the HTTP method says what to do with it: GET reads, POST creates, PUT/PATCH updates, DELETE removes. Avoid verbs in paths like /createJob or /getJobById; use GET /jobs and POST /jobs instead. Each resource needs a stable identifier, and the server should be stateless — every request carries the authentication and context it needs. Responses should be self-descriptive (correct status codes and headers) and, where practical, cacheable so intermediaries can reuse them.",
+            "examples": [
+              {
+                "title": "Procedure-style versus resource-style",
+                "language": "javascript",
+                "code": "// Procedure style (avoid)\napp.get(\"/getJobById/:id\", h);\napp.post(\"/createJob\", h);\napp.post(\"/deleteJob/:id\", h);\n\n// Resource style\napp.get(\"/jobs/:id\", h);       // read one\napp.post(\"/jobs\", h);          // create\napp.patch(\"/jobs/:id\", h);     // partial update\napp.delete(\"/jobs/:id\", h);    // remove\napp.get(\"/jobs/:id/applications\", h);  // nested resource",
+                "walkthrough": "The resource style keeps URLs stable nouns and lets the method carry the action, which makes the API predictable from the URL alone."
+              }
+            ],
+            "useCase": "Public APIs and microservice boundaries where consistency across teams matters more than cleverness.",
+            "knowledgeCheck": [
+              {
+                "question": "What should a REST URL contain?",
+                "type": "mcq",
+                "options": ["Nouns identifying the resource", "The HTTP verb", "JavaScript functions", "Database table names only"],
+                "correctIndex": 0,
+                "explanation": "The method already carries the action; the path carries identity."
+              },
+              {
+                "question": "What does 'stateless' mean for a REST server?",
+                "type": "mcq",
+                "options": ["Each request contains all context it needs; no server-side session state", "The server keeps user sessions in memory", "Responses are never cached", "The API cannot store data"],
+                "correctIndex": 0,
+                "explanation": "Statelessness lets any server instance handle any request."
+              }
+            ],
+            "summary": "URLs are nouns, methods are verbs, and every request is self-contained. Predictability beats cleverness."
+          }
+        },
+        {
+          "slug": "methods-status-codes-idempotency",
+          "title": "Status Codes, Methods, and Idempotency",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Return accurate status codes", "Explain idempotency and when clients retry"],
+          "topics": ["status-codes", "idempotency"],
+          "content": {
+            "introduction": "Status codes are the API's contract with clients: they decide whether to retry, render an error, or move on.",
+            "explanation": "Group them by class: 2xx success, 4xx the client's mistake, 5xx the server's. Creating a resource returns 201 with a Location header; a successful no-content update returns 204; a missing resource is 404, malformed input 400, failed authentication 401, forbidden 403, and a conflict with existing state 409. Idempotency means performing the same request multiple times has the same effect as once — GET, PUT, and DELETE are idempotent, POST is not. That is why clients and gateways may safely retry a timed-out PUT but must be cautious retrying POST unless it carries an idempotency key.",
+            "examples": [
+              {
+                "title": "Choosing the right status code",
+                "language": "javascript",
+                "code": "app.patch(\"/jobs/:id\", (req, res) => {\n  const job = findJob(req.params.id);\n  if (!job) return res.status(404).json({ error: \"Not found\" });\n  if (!isAdmin(req)) return res.status(403).json({ error: \"Forbidden\" });\n  const updated = updateJob(job, req.body);\n  if (!updated) return res.status(409).json({ error: \"Conflict\" });\n  res.status(204).end();\n});\n\napp.post(\"/jobs\", (req, res) => {\n  const job = createJob(req.body);\n  res.status(201).location(`/jobs/${job.id}`).json(job);\n});",
+                "walkthrough": "Each branch maps to a distinct client action: retry the lookup, fix permissions, resolve the conflict, or treat the POST as created."
+              }
+            ],
+            "useCase": "Any client that must decide automatically whether a failed request should be retried.",
+            "knowledgeCheck": [
+              {
+                "question": "Which status code signals that a resource was created?",
+                "type": "mcq",
+                "options": ["201", "200", "204", "301"],
+                "correctIndex": 0,
+                "explanation": "201 Created is normally paired with a Location header."
+              },
+              {
+                "question": "Which HTTP method is NOT idempotent?",
+                "type": "mcq",
+                "options": ["POST", "GET", "PUT", "DELETE"],
+                "correctIndex": 0,
+                "explanation": "Repeating POST creates duplicate resources unless an idempotency key is used."
+              }
+            ],
+            "summary": "Use 2xx for success, 4xx for client errors, 5xx for server errors. Idempotent methods are safe to retry."
+          }
+        },
+        {
+          "slug": "pagination-filtering-versioning",
+          "title": "Pagination, Filtering, and Versioning",
+          "order": 3,
+          "durationMinutes": 25,
+          "isPreview": false,
+          "objectives": ["Paginate collections with a stable strategy", "Evolve an API without breaking clients"],
+          "topics": ["pagination", "versioning"],
+          "content": {
+            "introduction": "Collections grow without bound, and APIs change over time — pagination bounds responses, versioning protects clients.",
+            "explanation": "Offset pagination (skip/limit) is simple but shifts rows when data changes mid-read. Cursor-based pagination keys off a stable sort value, so pages stay consistent under inserts — the right default for feeds and large tables. Filtering and sorting belong in the query string: ?status=open&sort=-createdAt. For evolution, additive changes rarely break clients, but removing or renaming fields does; a version segment like /v1/jobs or a version header lets you run both shapes until clients migrate.",
+            "examples": [
+              {
+                "title": "Cursor pagination endpoint",
+                "language": "javascript",
+                "code": "app.get(\"/jobs\", async (req, res) => {\n  const limit = Math.min(Number(req.query.limit) || 20, 100);\n  const filter = { status: req.query.status || \"open\" };\n  if (req.query.cursor) filter._id = { $lt: ObjectId(req.query.cursor) };\n\n  const jobs = await db.jobs\n    .find(filter)\n    .sort({ _id: -1 })\n    .limit(limit + 1)\n    .toArray();\n\n  const hasMore = jobs.length > limit;\n  const items = hasMore ? jobs.slice(0, limit) : jobs;\n  res.json({ items, nextCursor: hasMore ? String(items.at(-1)._id) : null });\n});",
+                "walkthrough": "Fetching one extra row reveals whether more pages exist; the last id becomes the cursor for the next request."
+              }
+            ],
+            "useCase": "Job boards, activity feeds, and admin lists where results change while users page through them.",
+            "knowledgeCheck": [
+              {
+                "question": "What is the main weakness of offset pagination?",
+                "type": "mcq",
+                "options": ["Rows shift when data is inserted or deleted mid-read", "It requires a cursor", "It cannot return many pages", "It does not support filtering"],
+                "correctIndex": 0,
+                "explanation": "A changing dataset makes skip/limit skip or repeat items."
+              },
+              {
+                "question": "When do you typically need an API version bump?",
+                "type": "mcq",
+                "options": ["When a change could break existing clients", "On every new endpoint", "When you add a field clients ignore", "When you fix a bug"],
+                "correctIndex": 0,
+                "explanation": "Additive, backward-compatible changes do not require a new version."
+              }
+            ],
+            "summary": "Bound collections with cursor pagination, express filters in the query string, and version only when clients would break."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "security-validation-and-testing",
+      "title": "Security, Validation & Testing APIs",
+      "description": "Protect endpoints, reject bad input early, and prove the API works with automated tests.",
+      "order": 4,
+      "estimatedHours": 14,
+      "prerequisites": ["designing-rest-apis"],
+      "completionCriteria": "Ship an endpoint that validates input, enforces auth, and passes an automated test suite covering success and failure paths.",
+      "lessons": [
+        {
+          "slug": "input-validation-and-sanitization",
+          "title": "Input Validation and Sanitization",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Validate request bodies against a schema", "Reject malformed input before it reaches business logic"],
+          "topics": ["validation", "sanitization"],
+          "content": {
+            "introduction": "Every byte a client sends is hostile until proven otherwise — validation is the boundary where bad data dies.",
+            "explanation": "Validate type, shape, and range on every field: strings trimmed and length-limited, numbers bounded, enums checked against allowed values, unknown keys stripped so clients cannot inject fields like role: admin. Validation must run before any database write, and failures should return 400 with a field-by-field message the client can display. Sanitization is a separate step: trim whitespace, normalize casing, and escape values destined for HTML or queries. Validation proves the data is well-formed; it does not replace parameterized queries against injection.",
+            "examples": [
+              {
+                "title": "Schema validation with Joi",
+                "language": "javascript",
+                "code": "const Joi = require(\"joi\");\n\nconst jobSchema = Joi.object({\n  title: Joi.string().trim().min(3).max(120).required(),\n  salaryMin: Joi.number().integer().min(0).max(1_000_000),\n  tags: Joi.array().items(Joi.string().max(30)).max(10),\n  role: Joi.forbidden(), // clients may never set this\n}).unknown(false);\n\napp.post(\"/jobs\", (req, res) => {\n  const { error, value } = jobSchema.validate(req.body);\n  if (error) return res.status(400).json({ error: error.message });\n  res.status(201).json(createJob(value));\n});",
+                "walkthrough": "The schema trims titles, bounds numbers, rejects unknown fields like role, and returns 400 before any data is stored."
+              }
+            ],
+            "useCase": "Registration forms, job postings, and any endpoint that writes client-supplied data.",
+            "knowledgeCheck": [
+              {
+                "question": "When should request input be validated?",
+                "type": "mcq",
+                "options": ["At the boundary, before any business logic or database write", "After the data is saved", "Only in the frontend", "During code review"],
+                "correctIndex": 0,
+                "explanation": "Early rejection keeps untrusted data out of the system entirely."
+              },
+              {
+                "question": "What does .unknown(false) accomplish?",
+                "type": "mcq",
+                "options": ["It strips or rejects fields not defined in the schema", "It allows any field", "It disables validation", "It encrypts the body"],
+                "correctIndex": 0,
+                "explanation": "Preventing extra keys stops clients from injecting privileged fields."
+              }
+            ],
+            "summary": "Validate every field at the boundary, reject unknown keys, and return 400 with precise messages."
+          }
+        },
+        {
+          "slug": "authentication-and-security-headers",
+          "title": "Authentication, Authorization, and Security Headers",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Distinguish authentication from authorization", "Harden responses with headers and safe defaults"],
+          "topics": ["auth", "security"],
+          "content": {
+            "introduction": "Authentication proves who a caller is; authorization decides what that caller may do — conflating them is a common source of privilege bugs.",
+            "explanation": "Typical APIs authenticate with a bearer token (JWT or opaque) sent in the Authorization header, verified by middleware that attaches the identity to the request. Authorization then checks role or ownership per route — a 401 when the token is missing or invalid, a 403 when it is valid but insufficient. Beyond auth, harden every response: set a Content-Type to stop MIME sniffing, add X-Content-Type-Options: nosniff, a strict Content-Security-Policy, and never echo raw input into HTML. Keep secrets in environment variables, and always use HTTPS so tokens cannot be read in transit.",
+            "examples": [
+              {
+                "title": "Auth middleware with 401 vs 403",
+                "language": "javascript",
+                "code": "function authenticate(req, res, next) {\n  const header = req.get(\"authorization\") || \"\";\n  const token = header.startsWith(\"Bearer \") ? header.slice(7) : null;\n  const user = token && verifyToken(token);\n  if (!user) return res.status(401).json({ error: \"Unauthorized\" });\n  req.user = user;\n  next();\n}\n\nfunction requireAdmin(req, res, next) {\n  if (req.user.role !== \"admin\") {\n    return res.status(403).json({ error: \"Forbidden\" });\n  }\n  next();\n}\n\napp.delete(\"/jobs/:id\", authenticate, requireAdmin, deleteJob);",
+                "walkthrough": "authenticate rejects missing or bad tokens with 401; requireAdmin rejects valid non-admin users with 403 before the handler runs."
+              }
+            ],
+            "useCase": "Protecting mutating endpoints so only authenticated, appropriately scoped callers can change data.",
+            "knowledgeCheck": [
+              {
+                "question": "When should an API return 403 instead of 401?",
+                "type": "mcq",
+                "options": ["The caller is authenticated but lacks permission", "The token is missing", "The body failed validation", "The route does not exist"],
+                "correctIndex": 0,
+                "explanation": "401 means 'who are you?'; 403 means 'you may not do this'."
+              },
+              {
+                "question": "Where should API secrets like signing keys live?",
+                "type": "mcq",
+                "options": ["In environment variables or a secret manager", "In the source code repository", "In the JavaScript bundle", "In a query string"],
+                "correctIndex": 0,
+                "explanation": "Code and client bundles are readable; secrets there are effectively public."
+              }
+            ],
+            "summary": "Authenticate with tokens, authorize per route, and harden responses with security headers and env-based secrets."
+          }
+        },
+        {
+          "slug": "testing-apis-with-supertest",
+          "title": "Testing APIs with Supertest",
+          "order": 3,
+          "durationMinutes": 35,
+          "isPreview": false,
+          "objectives": ["Write integration tests against the Express app", "Cover success and failure paths"],
+          "topics": ["testing", "supertest"],
+          "content": {
+            "introduction": "Integration tests send real HTTP requests through your Express app and assert on the responses clients actually receive.",
+            "explanation": "Supertest wraps an HTTP agent around your app object, so you can chain .get/.post, attach .send for the body, and assert on .expect(status) plus body fields — no port or real network needed. Good suites cover the contract: 201 on create, 400 on invalid input, 401 without a token, 404 for a missing id, and 200 on the happy path. Keep tests independent by seeding and cleaning the database per test, and mock only true external boundaries; testing through the real middleware stack catches wiring bugs that unit tests of handlers miss.",
+            "examples": [
+              {
+                "title": "Integration test for a job endpoint",
+                "language": "javascript",
+                "code": "const request = require(\"supertest\");\nconst app = require(\"../app\");\n\ndescribe(\"POST /jobs\", () => {\n  it(\"creates a job and returns 201\", async () => {\n    const res = await request(app)\n      .post(\"/jobs\")\n      .set(\"Authorization\", `Bearer ${adminToken}`)\n      .send({ title: \"Backend Engineer\", salaryMin: 90000 })\n      .expect(201);\n\n    expect(res.body).toHaveProperty(\"id\");\n    expect(res.headers.location).toBe(`/jobs/${res.body.id}`);\n  });\n\n  it(\"rejects a missing title with 400\", async () => {\n    await request(app)\n      .post(\"/jobs\")\n      .set(\"Authorization\", `Bearer ${adminToken}`)\n      .send({ salaryMin: 90000 })\n      .expect(400);\n  });\n});",
+                "walkthrough": "The first test proves the success contract including the Location header; the second locks in the validation failure so regressions surface immediately."
+              }
+            ],
+            "useCase": "Continuous integration gates that prevent a bad deploy from breaking API consumers.",
+            "knowledgeCheck": [
+              {
+                "question": "What does Supertest use to send requests?",
+                "type": "mcq",
+                "options": ["The exported Express app object, without binding a port", "A deployed staging server", "A browser", "Mocked fetch only"],
+                "correctIndex": 0,
+                "explanation": "It performs in-process requests through your real middleware stack."
+              },
+              {
+                "question": "Which cases should an API test suite cover?",
+                "type": "mcq",
+                "options": ["Success, validation failures, auth failures, and not-found cases", "Only the happy path", "Only error responses", "Only database internals"],
+                "correctIndex": 0,
+                "explanation": "The contract includes every status code clients rely on."
+              }
+            ],
+            "summary": "Test through the app with Supertest and assert the full contract: success, validation, auth, and not-found."
+          }
+        }
+      ]
+    }
+  ]
+}

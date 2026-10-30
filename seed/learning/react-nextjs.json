@@ -1,0 +1,575 @@
+{
+  "slug": "react-nextjs",
+  "title": "React.js and Next.js",
+  "topic": "Frontend Development",
+  "category": "Frontend",
+  "level": "intermediate",
+  "difficulty": "Intermediate",
+  "description": "Build modern, component-driven user interfaces with React, then ship production-grade applications with Next.js routing, data fetching, and rendering strategies.",
+  "objectives": [
+    "Compose reusable components with props, state, and effects",
+    "Manage complex state and side effects with hooks",
+    "Fetch, cache, and render data responsibly",
+    "Structure a Next.js app with file-based routing",
+    "Choose the right rendering strategy for a page"
+  ],
+  "prerequisites": ["HTML & CSS fundamentals", "JavaScript ES6+", "Basic async/await"],
+  "estimatedDuration": "8 weeks",
+  "estimatedHours": 64,
+  "tags": ["react", "nextjs", "frontend", "jsx", "hooks"],
+  "order": 3,
+  "status": "published",
+  "modules": [
+    {
+      "slug": "react-fundamentals",
+      "title": "React Fundamentals",
+      "description": "Think in components: JSX, rendering, props, and the component lifecycle.",
+      "order": 1,
+      "estimatedHours": 12,
+      "prerequisites": [],
+      "completionCriteria": "Build a static component tree that renders structured data from props without errors.",
+      "lessons": [
+        {
+          "slug": "thinking-in-components",
+          "title": "Thinking in Components",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Explain why UIs are split into components", "Identify component boundaries in an existing page"],
+          "topics": ["components", "composition"],
+          "content": {
+            "introduction": "React's core idea is simple: break a screen into small, self-contained functions that each return a piece of UI. Each component owns a slice of the page and can be reused anywhere.",
+            "explanation": "A React component is a function that returns JSX (a syntax extension that looks like HTML). React calls your function with a set of props and renders the result. Because components are plain functions, they compose naturally: a Header can contain a Logo and a Nav, and none of them needs to know how the others work. This isolation is what makes large interfaces maintainable — you change one component without reasoning about the entire page.",
+            "examples": [
+              {
+                "title": "A simple component",
+                "language": "jsx",
+                "code": "function Greeting({ name }) {\n  return <h1>Hello, {name}!</h1>;\n}\n\nexport default function App() {\n  return (\n    <section>\n      <Greeting name=\"Ada\" />\n      <Greeting name=\"Grace\" />\n    </section>\n  );\n}",
+                "walkthrough": "Greeting takes a name prop and returns JSX. App reuses it twice with different data — no duplication, no shared global state."
+              }
+            ],
+            "useCase": "Navigation bars, product cards, and form fields are classic component boundaries: they appear in multiple places with different data.",
+            "knowledgeCheck": [
+              {
+                "question": "What is a React component?",
+                "type": "mcq",
+                "options": ["A function that returns JSX", "An HTML template file", "A database table", "A CSS class"],
+                "correctIndex": 0,
+                "explanation": "Components are functions that return JSX; React renders their output."
+              },
+              {
+                "question": "How is data passed into a component?",
+                "type": "mcq",
+                "options": ["Through props", "Through global variables only", "Through CSS", "Through the URL"],
+                "correctIndex": 0,
+                "explanation": "Props are the read-only inputs a parent passes to a child."
+              }
+            ],
+            "summary": "Components are reusable functions returning JSX. Props carry data in; composition builds complex UIs from simple parts."
+          }
+        },
+        {
+          "slug": "jsx-and-rendering",
+          "title": "JSX and Rendering",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Write valid JSX", "Explain what React renders and when"],
+          "topics": ["jsx", "rendering"],
+          "content": {
+            "introduction": "JSX lets you describe UI markup inside JavaScript. It compiles to regular function calls, so it follows JavaScript rules — not HTML rules.",
+            "explanation": "JSX expressions must have exactly one root element. Attributes use camelCase (className instead of class, tabIndex instead of tabindex), and you embed JavaScript with curly braces. Babel transforms JSX into React.createElement calls, which React turns into a lightweight description of the UI — an object called a React element. React then reconciles that description with what's currently on screen and applies only the necessary DOM changes.",
+            "examples": [
+              {
+                "title": "JSX with expressions",
+                "language": "jsx",
+                "code": "const user = { name: \"Ada\", admin: true };\n\nfunction Badge({ user }) {\n  return (\n    <div className={user.admin ? \"badge badge--gold\" : \"badge\"}>\n      {user.name} {user.admin && \"· admin\"}\n    </div>\n  );\n}",
+                "walkthrough": "Curly braces embed JS. The && operator conditionally renders the admin label. className replaces the HTML class attribute."
+              }
+            ],
+            "useCase": "Rendering lists, conditional badges, and formatted dates directly in markup.",
+            "knowledgeCheck": [
+              {
+                "question": "Which JSX attribute sets an HTML class?",
+                "type": "mcq",
+                "options": ["className", "class", "classes", "styleName"],
+                "correctIndex": 0,
+                "explanation": "class is a reserved word in JavaScript, so React uses className."
+              },
+              {
+                "question": "How many root elements may a JSX expression have?",
+                "type": "mcq",
+                "options": ["Exactly one", "Unlimited", "Two", "Zero"],
+                "correctIndex": 0,
+                "explanation": "A single root keeps the returned tree unambiguous; wrap siblings in a fragment if needed."
+              }
+            ],
+            "summary": "JSX compiles to element descriptions. One root element, camelCase attributes, curly braces for JavaScript."
+          }
+        },
+        {
+          "slug": "props-in-depth",
+          "title": "Props in Depth",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Destructure and default props", "Pass children and callbacks"],
+          "topics": ["props", "children"],
+          "content": {
+            "introduction": "Props are a component's contract: the inputs it accepts and the shape it expects.",
+            "explanation": "Props are read-only — a component never mutates its own props. You can destructure them in the signature, supply defaults with parameter defaults, and pass arbitrary nested markup through the special children prop. Callback props let children notify parents, which is how state flows downward and events flow upward in React's unidirectional data model.",
+            "examples": [
+              {
+                "title": "Defaults, children, and callbacks",
+                "language": "jsx",
+                "code": "function Button({ label, variant = \"primary\", onDelete, children }) {\n  return (\n    <button\n      className={`btn btn--${variant}`}\n      onClick={onDelete}\n      type=\"button\"\n    >\n      {children ?? label}\n    </button>\n  );\n}\n\n<Button variant=\"danger\" onDelete={() => remove(id)}>\n  Delete\n</Button>",
+                "walkthrough": "variant defaults to primary, children overrides label when present, and onDelete lets the parent handle the click."
+              }
+            ],
+            "useCase": "Design systems where a single Button component serves every screen via props.",
+            "knowledgeCheck": [
+              {
+                "question": "Can a component modify the props it receives?",
+                "type": "mcq",
+                "options": ["No, props are read-only", "Yes, any prop", "Only arrays", "Only strings"],
+                "correctIndex": 0,
+                "explanation": "Mutating props breaks React's data-flow assumptions; derive new values instead."
+              },
+              {
+                "question": "What does the children prop contain?",
+                "type": "mcq",
+                "options": ["Nested markup passed between tags", "The component's own state", "CSS classes", "Route params"],
+                "correctIndex": 0,
+                "explanation": "children captures whatever you nest inside the component's tags."
+              }
+            ],
+            "summary": "Props are read-only inputs with defaults and children. Callback props carry events back up to the parent."
+          }
+        },
+        {
+          "slug": "component-boundaries",
+          "title": "Choosing Component Boundaries",
+          "order": 4,
+          "durationMinutes": 25,
+          "isPreview": false,
+          "objectives": ["Split a page into components by responsibility", "Avoid premature abstraction"],
+          "topics": ["composition", "design"],
+          "content": {
+            "introduction": "Good boundaries make code reusable; bad ones create coupling. The goal is to split by responsibility, not by size.",
+            "explanation": "A useful rule: extract a component when it has its own meaningful name in your product vocabulary — ProductCard, SearchBar, InvoiceTotal. Split further when a piece has independent state or props that change for unrelated reasons. Avoid extracting too early: duplicating three lines twice is cheaper than inventing the wrong abstraction. When a component needs more than a handful of props, it is usually doing too much.",
+            "examples": [
+              {
+                "title": "Before and after",
+                "language": "jsx",
+                "code": "// Before: one 200-line function\nfunction ProductsPage() { /* header, grid, card markup, pagination */ }\n\n// After: named, independent pieces\nfunction ProductsPage() {\n  return (\n    <main>\n      <SearchBar value={q} onChange={setQ} />\n      <ProductGrid items={items} />\n      <Pagination page={page} onPageChange={setPage} />\n    </main>\n  );\n}",
+                "walkthrough": "Each child has a single job and its own props, so any of them can change or be reused independently."
+              }
+            ],
+            "useCase": "Any dashboard or marketing page that mixes several distinct regions.",
+            "knowledgeCheck": [
+              {
+                "question": "What is the best signal that something should be its own component?",
+                "type": "mcq",
+                "options": ["It has a meaningful name and independent responsibilities", "It is longer than 50 lines", "It uses CSS", "It appears twice in the same file"],
+                "correctIndex": 0,
+                "explanation": "Named responsibilities predict where changes will happen; length alone does not."
+              },
+              {
+                "question": "What is premature abstraction?",
+                "type": "mcq",
+                "options": ["Building a reusable piece before its requirements are clear", "Adding too many tests", "Using TypeScript", "Splitting a file too late"],
+                "correctIndex": 0,
+                "explanation": "The wrong shared component is more expensive than temporary duplication."
+              }
+            ],
+            "summary": "Split by named responsibility and independent state. Duplicate small amounts until the pattern is obvious."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "state-and-events",
+      "title": "State and Events",
+      "description": "Make components interactive with state, event handlers, and controlled inputs.",
+      "order": 2,
+      "estimatedHours": 14,
+      "prerequisites": ["react-fundamentals"],
+      "completionCriteria": "Build an interactive form that validates input and updates UI from state.",
+      "lessons": [
+        {
+          "slug": "useState-and-re-render",
+          "title": "useState and Re-rendering",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Declare state", "Explain what triggers a re-render"],
+          "topics": ["useState", "state"],
+          "content": {
+            "introduction": "State is data that changes over time and causes the UI to update when it does.",
+            "explanation": "useState returns the current value and a setter. Calling the setter schedules a re-render of that component (and its children). Two things surprise beginners: React batches updates so multiple setters in one handler produce a single render, and the setter ignores changes when the new value is identical to the current one (Object.is comparison) — so always compute from the previous value when updating based on it.",
+            "examples": [
+              {
+                "title": "Counter with functional update",
+                "language": "jsx",
+                "code": "import { useState } from \"react\";\n\nfunction Counter() {\n  const [count, setCount] = useState(0);\n\n  return (\n    <button onClick={() => setCount((c) => c + 1)}>\n      Clicked {count} times\n    </button>\n  );\n}",
+                "walkthrough": "The functional form (c) => c + 1 always sees the latest value, even across batched updates."
+              }
+            ],
+            "useCase": "Counters, toggles, expand/collapse panels, and any UI that remembers something between renders.",
+            "knowledgeCheck": [
+              {
+                "question": "What does calling a useState setter do?",
+                "type": "mcq",
+                "options": ["Schedules a re-render of the component", "Mutates the DOM directly", "Reloads the page", "Sends a network request"],
+                "correctIndex": 0,
+                "explanation": "React re-renders and diffs the output to update only what changed."
+              },
+              {
+                "question": "Why use the functional updater form setCount(c => c + 1)?",
+                "type": "mcq",
+                "options": ["It reads the latest state even when updates are batched", "It is faster in every case", "It skips rendering", "It disables validation"],
+                "correctIndex": 0,
+                "explanation": "Batching can defer the new value; the functional form receives the pending value."
+              }
+            ],
+            "summary": "State drives re-renders. Use functional updaters when new state depends on the old."
+          }
+        },
+        {
+          "slug": "handling-events",
+          "title": "Handling Events",
+          "order": 2,
+          "durationMinutes": 25,
+          "isPreview": false,
+          "objectives": ["Attach handlers", "Understand event pooling and synthetic events"],
+          "topics": ["events", "handlers"],
+          "content": {
+            "introduction": "React wraps native events in synthetic events with a consistent API across browsers.",
+            "explanation": "Event handlers are passed as functions — onClick, onChange, onSubmit — and receive a synthetic event object. Because handlers are closures, they capture the values from the render they were created in; if a handler needs a fresh value, include it in the dependency array of a callback or read it from state. React attaches listeners at the root, which makes event handling efficient and consistent.",
+            "examples": [
+              {
+                "title": "Handler with captured values",
+                "language": "jsx",
+                "code": "function ItemRow({ item, onRemove }) {\n  // onRemove already knows which item — no data-id scraping needed\n  return (\n    <li>\n      {item.title}\n      <button onClick={() => onRemove(item.id)}>Remove</button>\n    </li>\n  );\n}",
+                "walkthrough": "The inline arrow captures item.id at render time, so the parent receives the right identifier."
+              }
+            ],
+            "useCase": "Any interactive control: buttons, list actions, drag handles, keyboard shortcuts.",
+            "knowledgeCheck": [
+              {
+                "question": "How does React receive native events?",
+                "type": "mcq",
+                "options": ["Through synthetic events attached at the root", "By overriding window.onclick", "Via iframes", "It does not handle events"],
+                "correctIndex": 0,
+                "explanation": "Root delegation gives consistent behavior and one listener per event type."
+              },
+              {
+                "question": "Why might an inline handler see stale values?",
+                "type": "mcq",
+                "options": ["Closures capture the render they were created in", "React clears state on events", "Events fire before render", "Props are frozen"],
+                "correctIndex": 0,
+                "explanation": "Include the value in state or a ref if the handler must read the latest."
+              }
+            ],
+            "summary": "Handlers are closures over their render. Use synthetic events for cross-browser consistency."
+          }
+        },
+        {
+          "slug": "controlled-inputs",
+          "title": "Controlled Inputs",
+          "order": 3,
+          "durationMinutes": 35,
+          "isPreview": false,
+          "objectives": ["Bind inputs to state", "Validate and submit forms"],
+          "topics": ["forms", "controlled-components"],
+          "content": {
+            "introduction": "A controlled input's value comes from state, making React the single source of truth.",
+            "explanation": "Set value from state and update it in onChange. This lets you validate as the user types, enforce formatting (uppercasing a code field), disable submit until the form is valid, and reset the form in one place. On submit, read the state values rather than scraping the DOM. Because React controls the value, you can never end up with an input showing something state does not know about.",
+            "examples": [
+              {
+                "title": "Validated form",
+                "language": "jsx",
+                "code": "function SignupForm() {\n  const [email, setEmail] = useState(\"\");\n  const [error, setError] = useState(\"\");\n\n  function handleSubmit(e) {\n    e.preventDefault();\n    if (!email.includes(\"@\")) {\n      setError(\"Enter a valid email\");\n      return;\n    }\n    setError(\"\");\n    submit({ email });\n  }\n\n  return (\n    <form onSubmit={handleSubmit}>\n      <input\n        type=\"email\"\n        value={email}\n        onChange={(e) => setEmail(e.target.value)}\n        aria-invalid={Boolean(error)}\n      />\n      {error && <p role=\"alert\">{error}</p>}\n      <button disabled={!email}>Sign up</button>\n    </form>\n  );\n}",
+                "walkthrough": "value + onChange keep state in sync; validation runs before submit; the button disables until there is input."
+              }
+            ],
+            "useCase": "Search boxes with debounce, checkout forms, profile editors, and any input needing instant feedback.",
+            "knowledgeCheck": [
+              {
+                "question": "What makes an input 'controlled'?",
+                "type": "mcq",
+                "options": ["Its value is set from React state", "It has a name attribute", "It uses TypeScript", "It is inside a form"],
+                "correctIndex": 0,
+                "explanation": "value comes from state and onChange writes back to it."
+              },
+              {
+                "question": "Why call e.preventDefault() in a form submit handler?",
+                "type": "mcq",
+                "options": ["To stop the browser's default full-page navigation", "To clear the form", "To validate the email", "To disable the button"],
+                "correctIndex": 0,
+                "explanation": "React apps handle submission in JS; the default would reload the page."
+              }
+            ],
+            "summary": "Bind value to state, update on change, validate before submit. React stays the single source of truth."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "hooks-in-depth",
+      "title": "Hooks in Depth",
+      "description": "Effects, context, and custom hooks for logic that outlives a single component.",
+      "order": 3,
+      "estimatedHours": 18,
+      "prerequisites": ["state-and-events"],
+      "completionCriteria": "Implement an effect with correct cleanup and extract a reusable custom hook.",
+      "lessons": [
+        {
+          "slug": "useeffect-and-cleanup",
+          "title": "useEffect and Cleanup",
+          "order": 1,
+          "durationMinutes": 35,
+          "isPreview": true,
+          "objectives": ["Sync with systems outside React", "Write correct cleanup"],
+          "topics": ["useEffect", "lifecycle"],
+          "content": {
+            "introduction": "Effects synchronize React with things outside it: networks, subscriptions, timers, and the DOM.",
+            "explanation": "By default an effect runs after every commit. A dependency array narrows that to only when listed values change; an empty array runs once after mount. Anything an effect creates — timers, listeners, subscriptions — must be torn down in the returned cleanup function, which runs before the next effect and on unmount. Think of an effect as a contract: whatever you set up, you take down.",
+            "examples": [
+              {
+                "title": "Subscription with cleanup",
+                "language": "jsx",
+                "code": "function useWindowWidth() {\n  const [width, setWidth] = useState(window.innerWidth);\n\n  useEffect(() => {\n    const onResize = () => setWidth(window.innerWidth);\n    window.addEventListener(\"resize\", onResize);\n    return () => window.removeEventListener(\"resize\", onResize);\n  }, []);\n\n  return width;\n}",
+                "walkthrough": "The effect registers a listener; the returned function removes it. Running the effect once keeps a single listener alive."
+              }
+            ],
+            "useCase": "Subscribing to WebSocket feeds, media queries, and browser events from a hook.",
+            "knowledgeCheck": [
+              {
+                "question": "When does a useEffect with [] run?",
+                "type": "mcq",
+                "options": ["Once after the first render", "Before every render", "Never", "Only on unmount"],
+                "correctIndex": 0,
+                "explanation": "An empty dependency array limits the effect to mount."
+              },
+              {
+                "question": "What is the purpose of the function returned from useEffect?",
+                "type": "mcq",
+                "options": ["Cleanup — it runs before the next effect and on unmount", "It renders more UI", "It resets state", "It fetches data"],
+                "correctIndex": 0,
+                "explanation": "Cleanup prevents leaked listeners, timers, and subscriptions."
+              }
+            ],
+            "summary": "Effects sync with the outside world. Declare dependencies honestly and always clean up."
+          }
+        },
+        {
+          "slug": "context-and-provider",
+          "title": "Context and Provider",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Avoid prop drilling", "Consume context safely"],
+          "topics": ["context", "prop-drilling"],
+          "content": {
+            "introduction": "Context passes data through intermediate components without threading props at every level.",
+            "explanation": "Create a context, wrap a subtree in its Provider with a value, and read it from any descendant with the useContext hook. This suits genuinely global data — theme, authenticated user, locale. It is a poor fit for fast-changing values consumed by few components, because every consumer re-renders whenever the value changes; keep the value stable (useMemo) or split contexts by concern.",
+            "examples": [
+              {
+                "title": "Theme context",
+                "language": "jsx",
+                "code": "const ThemeContext = createContext(\"light\");\n\nfunction App() {\n  const [theme, setTheme] = useState(\"light\");\n  const value = useMemo(() => ({ theme, setTheme }), [theme]);\n  return (\n    <ThemeContext.Provider value={value}>\n      <Toolbar />\n    </ThemeContext.Provider>\n  );\n}\n\nfunction Toolbar() {\n  const { theme, setTheme } = useContext(ThemeContext);\n  return <button onClick={() => setTheme(theme === \"light\" ? \"dark\" : \"light\")}>{theme}</button>;\n}",
+                "walkthrough": "Toolbar reads context directly; no intermediate component forwards anything. useMemo keeps the value reference stable."
+              }
+            ],
+            "useCase": "Theme, auth session, feature flags, and locale shared across an entire app.",
+            "knowledgeCheck": [
+              {
+                "question": "What problem does context solve?",
+                "type": "mcq",
+                "options": ["Prop drilling through many layers", "Slow network requests", "CSS specificity", "Type checking"],
+                "correctIndex": 0,
+                "explanation": "It provides a direct channel to deep descendants."
+              },
+              {
+                "question": "What happens when a context value changes?",
+                "type": "mcq",
+                "options": ["All consumers re-render", "Only the provider re-renders", "Nothing", "The page reloads"],
+                "correctIndex": 0,
+                "explanation": "Keep the value small or memoized to limit re-renders."
+              }
+            ],
+            "summary": "Context eliminates prop drilling for genuinely shared data. Stabilize the value to avoid excess renders."
+          }
+        },
+        {
+          "slug": "custom-hooks",
+          "title": "Custom Hooks",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Extract reusable logic", "Respect the rules of hooks"],
+          "topics": ["custom-hooks", "reuse"],
+          "content": {
+            "introduction": "Custom hooks package stateful logic so multiple components can share it without sharing state.",
+            "explanation": "A custom hook is a function whose name starts with use and that may call other hooks. Extract one when two components duplicate the same state-and-effect pattern — a fetch with loading and error, a media-query subscription, an interval. The rules of hooks still apply: call hooks unconditionally at the top level, never in loops or branches. Each call of the hook keeps its own independent state.",
+            "examples": [
+              {
+                "title": "A fetch hook",
+                "language": "jsx",
+                "code": "function useFetch(url) {\n  const [data, setData] = useState(null);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState(null);\n\n  useEffect(() => {\n    const controller = new AbortController();\n    setLoading(true);\n    fetch(url, { signal: controller.signal })\n      .then((r) => r.json())\n      .then(setData)\n      .catch((e) => e.name !== \"AbortError\" && setError(e))\n      .finally(() => setLoading(false));\n    return () => controller.abort();\n  }, [url]);\n\n  return { data, loading, error };\n}\n\n// usage\nconst { data, loading, error } = useFetch(\"/api/products\");",
+                "walkthrough": "The hook owns the whole lifecycle, cancels in-flight requests on cleanup, and returns a consistent shape."
+              }
+            ],
+            "useCase": "Shared data fetching, keyboard shortcuts, viewport detection, and debounce logic.",
+            "knowledgeCheck": [
+              {
+                "question": "What naming convention marks a custom hook?",
+                "type": "mcq",
+                "options": ["It starts with 'use'", "It ends with 'Hook'", "It is capitalized", "It has no arguments"],
+                "correctIndex": 0,
+                "explanation": "The use prefix lets React's linter enforce the rules of hooks."
+              },
+              {
+                "question": "Can two components using the same custom hook share state?",
+                "type": "mcq",
+                "options": ["No, each call keeps its own state", "Yes, always", "Only in context", "Only in class components"],
+                "correctIndex": 0,
+                "explanation": "Hooks return values, not shared storage; each invocation is independent."
+              }
+            ],
+            "summary": "Custom hooks share logic, not state. Follow the rules of hooks and keep them focused."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "nextjs-production",
+      "title": "Next.js for Production",
+      "description": "File-based routing, data fetching, and choosing how each page renders.",
+      "order": 4,
+      "estimatedHours": 20,
+      "prerequisites": ["hooks-in-depth"],
+      "completionCriteria": "Scaffold a Next.js app with dynamic routes and an appropriate rendering strategy per page.",
+      "lessons": [
+        {
+          "slug": "file-based-routing",
+          "title": "File-Based Routing",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Map folders to routes", "Build dynamic and catch-all routes"],
+          "topics": ["nextjs", "routing"],
+          "content": {
+            "introduction": "In the Next.js App Router, the folder structure under app/ defines the URL structure.",
+            "explanation": "Each folder is a route segment; page.jsx inside it defines the UI at that URL. Dynamic segments use bracket syntax — [id] captures one segment, [...slug] captures any number. Because routing happens on the server, you can read params directly in a server component and fetch exactly the data that route needs, with no client-side router configuration.",
+            "examples": [
+              {
+                "title": "Dynamic route",
+                "language": "jsx",
+                "code": "// app/jobs/[id]/page.js\nexport default async function JobPage({ params }) {\n  const { id } = await params;\n  const job = await getJob(id);\n  if (!job) return notFound();\n  return <JobDetail job={job} />;\n}",
+                "walkthrough": "params is awaited, data is fetched on the server, and a missing record triggers the not-found boundary."
+              }
+            ],
+            "useCase": "Job detail pages, blog posts, and user profiles — anything keyed by an id in the URL.",
+            "knowledgeCheck": [
+              {
+                "question": "What does a folder named [id] under app/ create?",
+                "type": "mcq",
+                "options": ["A dynamic route segment", "A static file", "An API endpoint only", "A component library"],
+                "correctIndex": 0,
+                "explanation": "The bracket makes the segment a parameter that varies per URL."
+              },
+              {
+                "question": "What does [...slug] match?",
+                "type": "mcq",
+                "options": ["Any number of path segments", "Exactly one segment", "Only numeric ids", "Query strings"],
+                "correctIndex": 0,
+                "explanation": "A catch-all captures nested paths under its parent route."
+              }
+            ],
+            "summary": "Folders become routes; brackets create dynamic and catch-all segments."
+          }
+        },
+        {
+          "slug": "rendering-strategies",
+          "title": "Choosing a Rendering Strategy",
+          "order": 2,
+          "durationMinutes": 35,
+          "isPreview": false,
+          "objectives": ["Compare SSR, SSG, and client rendering", "Pick a strategy per page"],
+          "topics": ["ssr", "ssg", "caching"],
+          "content": {
+            "introduction": "Different pages have different freshness and performance needs — Next.js lets you choose per route.",
+            "explanation": "Static generation builds the HTML once at deploy time: fastest and cheapest, ideal for content that rarely changes. Server rendering generates HTML per request: always fresh, ideal for personalized or rapidly changing data. Client-side rendering hydrates in the browser: best for highly interactive views where initial HTML matters less. The right choice is a product decision — freshness versus speed — not a default you apply everywhere.",
+            "examples": [
+              {
+                "title": "Per-page decisions",
+                "language": "jsx",
+                "code": "// Static: marketing page, rebuilt on deploy\n// export const revalidate = 3600;\n\n// Dynamic per request: dashboard with live data\nexport const dynamic = \"force-dynamic\";\n\n// Client: highly interactive editor\n\"use client\";\nexport default function Editor() { /* ... */ }",
+                "walkthrough": "Each route declares its own freshness contract; static pages can revalidate on an interval."
+              }
+            ],
+            "useCase": "Blog posts static, dashboards dynamic, editors client-side — one app, three strategies.",
+            "knowledgeCheck": [
+              {
+                "question": "When is static generation the best choice?",
+                "type": "mcq",
+                "options": ["Content that rarely changes and must load fast", "Per-user private dashboards", "Live auction bidding", "Real-time chat"],
+                "correctIndex": 0,
+                "explanation": "Static HTML is the fastest option and trivially cacheable."
+              },
+              {
+                "question": "What does force-dynamic do?",
+                "type": "mcq",
+                "options": ["Renders the page on every request", "Disables caching globally", "Forces client-only rendering", "Builds a static page"],
+                "correctIndex": 0,
+                "explanation": "Use it when the response must reflect the latest data."
+              }
+            ],
+            "summary": "Match the strategy to freshness needs: static for stable content, dynamic for live data, client for rich interaction."
+          }
+        },
+        {
+          "slug": "data-fetching-patterns",
+          "title": "Data Fetching Patterns",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Fetch in server components", "Handle loading and error states"],
+          "topics": ["data-fetching", "suspense"],
+          "content": {
+            "introduction": "Server components can await data directly, which removes client-side fetch boilerplate.",
+            "explanation": "In an async server component, await your data source and render it — no useEffect, no loading flag, no waterfall. For perceived performance, wrap slow sections in Suspense with a fallback so the rest of the page streams immediately. Errors belong in error boundaries, which keep a broken widget from taking down the whole route. Reserve client-side fetching for data that genuinely depends on browser state or user interaction.",
+            "examples": [
+              {
+                "title": "Streaming with Suspense",
+                "language": "jsx",
+                "code": "export default function Page() {\n  return (\n    <main>\n      <Header />\n      <Suspense fallback={<RecommendationsSkeleton />}>\n        <Recommendations />\n      </Suspense>\n    </main>\n  );\n}\n\nasync function Recommendations() {\n  const items = await fetch(\"https://api.example.com/recs\", { cache: \"no-store\" });\n  return <RecList data={await items.json()} />;\n}",
+                "walkthrough": "Header paints instantly; the slow section streams in behind a skeleton without blocking the route."
+              }
+            ],
+            "useCase": "Dashboards with one slow widget, product pages with personalized carousels.",
+            "knowledgeCheck": [
+              {
+                "question": "Why await data in a server component instead of useEffect?",
+                "type": "mcq",
+                "options": ["No client bundle cost and no loading-state boilerplate", "It is the only valid way", "It disables caching", "It forces static rendering"],
+                "correctIndex": 0,
+                "explanation": "The data never needs to cross the network to the browser."
+              },
+              {
+                "question": "What does Suspense's fallback render?",
+                "type": "mcq",
+                "options": ["Placeholder UI while the section loads", "An error message", "The previous page", "Nothing ever"],
+                "correctIndex": 0,
+                "explanation": "It gives users immediate feedback instead of a blank region."
+              }
+            ],
+            "summary": "Fetch on the server, stream slow parts with Suspense, and contain failures with error boundaries."
+          }
+        }
+      ]
+    }
+  ]
+}

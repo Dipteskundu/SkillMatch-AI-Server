@@ -1,0 +1,535 @@
+{
+  "slug": "technical-interview-prep",
+  "title": "Technical Interview Preparation",
+  "topic": "Career Preparation",
+  "category": "Career",
+  "level": "intermediate",
+  "difficulty": "Intermediate",
+  "description": "Prepare for coding and system design interviews with core data structures, repeatable problem-solving strategies, system design fundamentals, and the communication skills interviewers actually score.",
+  "objectives": [
+    "Analyze time and space complexity and pick the right data structure",
+    "Break an unfamiliar problem into a working approach before coding",
+    "Design a scalable service and defend the trade-offs you make",
+    "Communicate clearly under pressure using structured answers"
+  ],
+  "prerequisites": ["JavaScript fundamentals", "Basic familiarity with arrays, maps, and functions", "Comfort writing and running small programs"],
+  "estimatedDuration": "6 weeks",
+  "estimatedHours": 48,
+  "tags": ["interview", "algorithms", "system-design", "communication"],
+  "order": 8,
+  "status": "published",
+  "modules": [
+    {
+      "slug": "ds-algorithms-fundamentals",
+      "title": "Data Structures & Algorithms Fundamentals",
+      "description": "Complexity analysis and the core structures that show up in nearly every coding interview.",
+      "order": 1,
+      "estimatedHours": 12,
+      "prerequisites": [],
+      "completionCriteria": "Analyze a function's time and space complexity and choose the right structure for a lookup-heavy problem without hints.",
+      "lessons": [
+        {
+          "slug": "big-o-complexity-analysis",
+          "title": "Big-O and Complexity Analysis",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Classify common algorithms by growth rate", "Estimate the time and space cost of a loop-heavy function"],
+          "topics": ["big-o", "complexity", "space"],
+          "content": {
+            "introduction": "Interviewers care less about memorized line counts and more about how your solution's cost grows as the input grows. Big-O is the language you use to say that out loud before you write code.",
+            "explanation": "Big-O describes how time or memory scales with input size n, dropping constants and lower-order terms: one pass over an array is O(n), two nested loops are O(n^2), halving the search range each step is O(log n), and sorting is typically O(n log n). When analyzing, count the dominant operation — comparisons, lookups, hash operations — and separate average from worst case, because a hash map is O(1) on average but degrades toward O(n) under heavy collisions. Always report space too: an array you build is O(n), and a recursive depth-first search can hold O(n) frames on the call stack.",
+            "examples": [
+              {
+                "title": "An O(n) solution using a hash set",
+                "language": "javascript",
+                "code": "function countPairs(nums, target) {\n  const seen = new Set();\n  let pairs = 0;\n  for (const n of nums) {\n    if (seen.has(target - n)) pairs++; // O(1) average lookup\n    seen.add(n);\n  }\n  return pairs;\n}\n// O(n) time, O(n) space: one pass, constant-time checks",
+                "walkthrough": "Each element is checked against the set once, so the loop dominates at O(n). The set stores at most n elements, giving O(n) extra space — far better than the O(n^2) pair-checking version."
+              }
+            ],
+            "useCase": "Justifying your approach before coding: 'this is O(n) time and O(n) space because of the set' tells the interviewer you understand the cost of your design.",
+            "knowledgeCheck": [
+              {
+                "question": "What is the average-case time complexity of a hash set lookup?",
+                "type": "mcq",
+                "options": ["O(1)", "O(n)", "O(log n)", "O(n log n)"],
+                "correctIndex": 0,
+                "explanation": "Hashing computes an index directly, so lookups are constant time on average (worst case O(n) with pathological collisions)."
+              },
+              {
+                "question": "A loop over n items that runs a second full loop over the same n items each iteration is:",
+                "type": "mcq",
+                "options": ["O(n log n)", "O(n^2)", "O(n)", "O(1)"],
+                "correctIndex": 1,
+                "explanation": "The inner loop runs about n times for each of the n outer iterations, giving n × n = O(n^2)."
+              }
+            ],
+            "summary": "Big-O measures growth, not absolute speed. Count the dominant operation, report average and worst case, and always include space."
+          }
+        },
+        {
+          "slug": "arrays-hashes-strings",
+          "title": "Arrays, Hash Maps, and Strings",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Choose between an array, map, and set", "Solve frequency and membership problems efficiently"],
+          "topics": ["arrays", "hash-maps", "strings"],
+          "content": {
+            "introduction": "Most interview problems hinge on one decision: which structure makes the check I need fast? Arrays win at ordered indexed access; hash maps and sets win at lookup by value.",
+            "explanation": "Arrays give O(1) access by index and O(1) amortized pushes, making them the default for ordered sequences and two-pointer scans. When you repeatedly ask 'have I seen this value?' or 'how many times has this appeared?', a Map or Set turns an O(n) search into O(1) average. String problems are usually frequency-map or two-pointer problems in disguise: count characters, compare maps, or sort a canonical key such as a character count signature. The trap is scanning an array inside a loop — if you catch yourself doing that, reach for a map keyed by the value you are searching for.",
+            "examples": [
+              {
+                "title": "Anagram check with a frequency map",
+                "language": "javascript",
+                "code": "function isAnagram(a, b) {\n  if (a.length !== b.length) return false;\n  const freq = new Map();\n  for (const ch of a) freq.set(ch, (freq.get(ch) ?? 0) + 1);\n  for (const ch of b) {\n    const count = (freq.get(ch) ?? 0) - 1;\n    if (count < 0) return false;\n    freq.set(ch, count);\n  }\n  return true;\n}",
+                "walkthrough": "The first pass counts characters in a, the second decrements as it walks b, and any negative count means b used a character a did not have. O(n) time instead of sorting both strings at O(n log n)."
+              }
+            ],
+            "useCase": "Word counts, duplicate detection, two-sum style lookups, anagrams, and caching previously computed values by key.",
+            "knowledgeCheck": [
+              {
+                "question": "Which structure gives O(1) average membership checks?",
+                "type": "mcq",
+                "options": ["A Set or Map", "A plain array", "A linked list", "A string"],
+                "correctIndex": 0,
+                "explanation": "Sets and maps hash the value to an index; arrays require scanning to find a value."
+              },
+              {
+                "question": "Why check a.length !== b.length first in the anagram function?",
+                "type": "mcq",
+                "options": ["Different lengths can never be anagrams, so it exits early", "It sorts the strings", "It avoids using a map", "JavaScript requires it"],
+                "correctIndex": 0,
+                "explanation": "It is a cheap O(1) rejection that skips unnecessary work."
+              }
+            ],
+            "summary": "Indexed access means array; lookup by value means map or set. Frequency maps turn most string problems into a single O(n) pass."
+          }
+        },
+        {
+          "slug": "trees-and-graph-traversal",
+          "title": "Trees and Graph Traversal",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Traverse a tree breadth-first and depth-first", "Pick BFS or DFS based on the problem shape"],
+          "topics": ["trees", "graphs", "bfs-dfs"],
+          "content": {
+            "introduction": "Trees and graphs reduce to two traversal ideas: explore level by level (BFS) or follow one branch to the bottom (DFS). Choosing the right one is often the whole problem.",
+            "explanation": "BFS uses a queue (first in, first out) and visits nodes in order of distance from the root, which makes it the natural tool for shortest paths in unbalanced graphs and for level-by-level output. DFS uses recursion or an explicit stack, needs less memory on shallow trees, and is the default for path, subtree, and backtracking questions. Graphs add one wrinkle: track visited nodes (a Set) or you will loop forever on cyclic structures. Both traversals run in O(V + E) for graphs and O(n) for trees, since every node and edge is processed once.",
+            "examples": [
+              {
+                "title": "Level-order (BFS) traversal",
+                "language": "javascript",
+                "code": "function levelOrder(root) {\n  if (!root) return [];\n  const result = [];\n  const queue = [root];\n  while (queue.length) {\n    const level = [];\n    const size = queue.length;\n    for (let i = 0; i < size; i++) {\n      const node = queue.shift();\n      level.push(node.val);\n      if (node.left) queue.push(node.left);\n      if (node.right) queue.push(node.right);\n    }\n    result.push(level);\n  }\n  return result;\n}",
+                "walkthrough": "Capturing queue.length before the inner loop fixes the size of the current level, so each pass collects exactly one level. Children are enqueued after their parent, guaranteeing top-down order."
+              }
+            ],
+            "useCase": "Level-order printing, shortest path in an unweighted grid, dependency resolution, and 'nearest K nodes' questions.",
+            "knowledgeCheck": [
+              {
+                "question": "Which traversal visits a tree level by level?",
+                "type": "mcq",
+                "options": ["Breadth-first search", "Depth-first search", "In-order traversal only", "Binary search"],
+                "correctIndex": 0,
+                "explanation": "BFS's queue drains one level before enqueuing the next."
+              },
+              {
+                "question": "What data structure does BFS rely on?",
+                "type": "mcq",
+                "options": ["A queue (first in, first out)", "A stack (last in, first out)", "A min-heap only", "A sorted array"],
+                "correctIndex": 0,
+                "explanation": "A FIFO queue preserves the order nodes were discovered, which produces level-by-level visits."
+              }
+            ],
+            "summary": "BFS = queue, level order, shortest path. DFS = stack/recursion, paths and subtrees. Mark visited nodes on graphs."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "problem-solving-strategies",
+      "title": "Problem-Solving Strategies",
+      "description": "Repeatable moves for turning a blank editor into a working, optimized solution.",
+      "order": 2,
+      "estimatedHours": 12,
+      "prerequisites": ["ds-algorithms-fundamentals"],
+      "completionCriteria": "Take a fresh problem from clarification to a working optimized solution, stating complexity at each step.",
+      "lessons": [
+        {
+          "slug": "breaking-down-a-problem",
+          "title": "Breaking Down a Problem",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Run a structured clarify-then-plan routine", "Move from a brute-force baseline to an optimized solution"],
+          "topics": ["methodology", "brute-force", "optimization"],
+          "content": {
+            "introduction": "Strong candidates do not start typing. They restate the problem, work a small example out loud, state a brute force, then improve it — and the interviewer follows every step.",
+            "explanation": "A reliable sequence is: restate the task in your own words, ask about constraints and edge cases (empty input? duplicates? how large is n?), walk through one concrete example, name the brute-force approach with its complexity, then identify what makes it slow and replace that step. For example, checking every pair for a target sum is O(n^2); the slow step is 'searching the array for the complement', and replacing it with a hash map lookup gives O(n). This narrative shows engineering judgment even if your final code has a bug, which is why interviewers weight it heavily.",
+            "examples": [
+              {
+                "title": "Brute force upgraded to a hash map",
+                "language": "javascript",
+                "code": "// Brute force: check every pair — O(n^2)\n// for (let i = 0; i < n; i++)\n//   for (let j = i + 1; j < n; j++) if (nums[i] + nums[j] === target) ...\n\nfunction twoSum(nums, target) {\n  const seen = new Map(); // value -> index\n  for (let i = 0; i < nums.length; i++) {\n    const need = target - nums[i];\n    if (seen.has(need)) return [seen.get(need), i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}",
+                "walkthrough": "The brute force asks 'does the complement exist?' by scanning; the map answers the same question in O(1). One pass, O(n) time, O(n) space."
+              }
+            ],
+            "useCase": "The opening two minutes of any coding interview, and the same routine for ambiguous real-world tasks at work.",
+            "knowledgeCheck": [
+              {
+                "question": "What should happen first when you receive an interview problem?",
+                "type": "mcq",
+                "options": ["Clarify the problem and work a small example", "Start coding the brute force immediately", "Optimize before understanding it", "Ask for the solution"],
+                "correctIndex": 0,
+                "explanation": "Clarifying constraints prevents solving the wrong problem and surfaces edge cases early."
+              },
+              {
+                "question": "In two-sum, which step of the brute force does the hash map replace?",
+                "type": "mcq",
+                "options": ["Searching the array for the complement value", "Iterating the array once", "Returning the indices", "Handling empty input"],
+                "correctIndex": 0,
+                "explanation": "The O(n) search becomes an O(1) lookup, which is what drops the whole solution to O(n)."
+              }
+            ],
+            "summary": "Restate, clarify, example, brute force, optimize. Name the slow step before you replace it."
+          }
+        },
+        {
+          "slug": "two-pointers-and-sliding-window",
+          "title": "Two Pointers and Sliding Window",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Recognize when a window applies", "Implement a window that never backtracks twice"],
+          "topics": ["two-pointers", "sliding-window"],
+          "content": {
+            "introduction": "When a problem asks about a contiguous range — longest, shortest, or count of subarrays — a sliding window replaces nested loops with a single pass.",
+            "explanation": "A window is two indices, start and end, that both only move forward. Expand end to include the next element, and shrink start while the window violates a condition (too many distinct characters, sum too large). Because each pointer advances at most n times, the whole scan is O(n) instead of the O(n^2) of enumerating every subarray. Two pointers are the general form: opposite ends for sorted-pair problems (two-sum on a sorted array, container-with-most-water), or both advancing for partition and merge patterns. The key invariant — what is true about the window right now — must be stated out loud before you code it.",
+            "examples": [
+              {
+                "title": "Longest substring without repeating characters",
+                "language": "javascript",
+                "code": "function longestUnique(s) {\n  const lastSeen = new Map();\n  let start = 0;\n  let best = 0;\n  for (let end = 0; end < s.length; end++) {\n    const ch = s[end];\n    const prev = lastSeen.get(ch);\n    if (prev !== undefined && prev >= start) start = prev + 1;\n    lastSeen.set(ch, end);\n    best = Math.max(best, end - start + 1);\n  }\n  return best;\n}",
+                "walkthrough": "end always moves forward; when a repeated character appears inside the window, start jumps past its previous position. Each index is visited a constant number of times, so the scan is O(n)."
+              }
+            ],
+            "useCase": "Longest/shortest subarray with a constraint, pair sums in a sorted array, merging sorted lists, and palindromes.",
+            "knowledgeCheck": [
+              {
+                "question": "When is a sliding window the right tool?",
+                "type": "mcq",
+                "options": ["The problem involves a contiguous range with a maintainable condition", "The input is unsorted and you need a value's index", "You must sort the data first", "The problem involves a tree only"],
+                "correctIndex": 0,
+                "explanation": "Windows work when you can update a summary as elements enter and leave without recomputing."
+              },
+              {
+                "question": "Why does the sliding window run in O(n) instead of O(n^2)?",
+                "type": "mcq",
+                "options": ["Both pointers move only forward, so each element is processed a constant number of times", "It uses recursion", "It sorts the input first", "It skips invalid inputs"],
+                "correctIndex": 0,
+                "explanation": "There is no backtracking: start and end each advance at most n times."
+              }
+            ],
+            "summary": "Contiguous range plus a maintainable condition means window. State the invariant, expand end, shrink start."
+          }
+        },
+        {
+          "slug": "dynamic-programming-basics",
+          "title": "Dynamic Programming Basics",
+          "order": 3,
+          "durationMinutes": 35,
+          "isPreview": false,
+          "objectives": ["Spot overlapping subproblems", "Convert a memoized recursion into a bottom-up loop"],
+          "topics": ["dynamic-programming", "memoization", "recursion"],
+          "content": {
+            "introduction": "Dynamic programming is just recursion plus remembering. You solve a problem by combining solutions to smaller versions of the same problem — and you never compute the same one twice.",
+            "explanation": "Two properties signal DP: optimal substructure (the best answer combines best answers to subproblems) and overlapping subproblems (the naive recursion recomputes the same inputs many times). Start with the naive recursive recurrence, add a memo table keyed by the argument to get top-down memoization, then invert it into a bottom-up loop that fills a table or keeps only the values it needs. That last step matters in interviews: Fibonacci as naive recursion is O(2^n), memoized it is O(n), and the iterative form with two rolling variables is O(n) time and O(1) space — no recursion-stack overflow risk.",
+            "examples": [
+              {
+                "title": "Climbing stairs, bottom-up with O(1) space",
+                "language": "javascript",
+                "code": "// ways(n) = ways(n - 1) + ways(n - 2)\nfunction climbStairs(n) {\n  if (n <= 1) return 1;\n  let prev2 = 1; // ways(i - 2)\n  let prev1 = 1; // ways(i - 1)\n  for (let i = 2; i <= n; i++) {\n    const ways = prev1 + prev2;\n    prev2 = prev1;\n    prev1 = ways;\n  }\n  return prev1;\n}",
+                "walkthrough": "Each iteration only needs the previous two values, so the whole table collapses into two variables. Linear time, constant space, and no stack depth to worry about."
+              }
+            ],
+            "useCase": "Counting paths, edit distance, knapsack-style choices, and any 'min cost to reach the end' grid problem.",
+            "knowledgeCheck": [
+              {
+                "question": "Which two properties define a dynamic programming problem?",
+                "type": "mcq",
+                "options": ["Optimal substructure and overlapping subproblems", "Sorted input and unique values", "Recursion and hashing", "Immutability and pure functions"],
+                "correctIndex": 0,
+                "explanation": "Subproblems must combine into an answer, and they must repeat — otherwise plain recursion suffices."
+              },
+              {
+                "question": "What is the main benefit of the bottom-up loop over naive recursion?",
+                "type": "mcq",
+                "options": ["It avoids repeated work and deep call stacks", "It always uses less code", "It handles unsorted input", "It removes the need for a base case"],
+                "correctIndex": 0,
+                "explanation": "Each state is computed exactly once, and iteration avoids recursion depth limits."
+              }
+            ],
+            "summary": "Write the recurrence, memoize it, then iterate. Keep only the states the next step actually needs."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "system-design-foundations",
+      "title": "System Design Foundations",
+      "description": "Scale a service from one box to many, then design a classic system end to end with stated trade-offs.",
+      "order": 3,
+      "estimatedHours": 14,
+      "prerequisites": ["problem-solving-strategies"],
+      "completionCriteria": "Produce a URL-shortener design that covers requirements, capacity estimates, data storage, and the redirect read path.",
+      "lessons": [
+        {
+          "slug": "scaling-a-web-service",
+          "title": "Scaling a Web Service",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Explain horizontal scaling and stateless services", "Describe the request path through a load-balanced fleet"],
+          "topics": ["scaling", "load-balancing", "statelessness"],
+          "content": {
+            "introduction": "System design interviews usually start with the same question: this works for 100 users — what breaks at 100,000? The answer is almost always state, single points of failure, and where load lands.",
+            "explanation": "Vertical scaling (bigger machine) hits a ceiling and creates a single point of failure, so systems scale horizontally: add cheap machines behind a load balancer. Horizontal scaling only works if servers are stateless — no session or file state tied to a particular box — because the balancer can send any request to any server. Move session data to a shared store (Redis), uploaded files to object storage, and background jobs to a queue. Then add redundancy at every tier: multiple database replicas, multi-zone deployment, and health checks so the balancer stops routing to dead instances. The classic failure to name in interviews is shared mutable state on the app server.",
+            "examples": [
+              {
+                "title": "Stateless sessions in Redis",
+                "language": "javascript",
+                "code": "// Session data lives in shared Redis so any server can serve any request\nimport { createClient } from 'redis';\n\nconst redis = createClient({ url: process.env.REDIS_URL });\nawait redis.connect();\n\nexport async function getSession(token) {\n  const raw = await redis.get(`session:${token}`);\n  return raw ? JSON.parse(raw) : null;\n}",
+                "walkthrough": "The app server keeps nothing about the user locally. Restart it, replace it, or add five more — every instance reads the same session store, so the load balancer can route freely."
+              }
+            ],
+            "useCase": "Explaining how a stateless tier plus a load balancer turns one server into a fleet.",
+            "knowledgeCheck": [
+              {
+                "question": "Why must app servers be stateless to scale horizontally?",
+                "type": "mcq",
+                "options": ["Any server must be able to handle any request", "Stateless code runs faster", "It removes the need for a database", "It avoids using HTTP"],
+                "correctIndex": 0,
+                "explanation": "If state lives on one box, requests pinned to it break when load balancing moves or removes that box."
+              },
+              {
+                "question": "Which component distributes incoming requests across servers?",
+                "type": "mcq",
+                "options": ["A load balancer", "A compiler", "A CDN only", "A package manager"],
+                "correctIndex": 0,
+                "explanation": "The load balancer routes by health and policy, and is the entry point that makes a fleet look like one service."
+              }
+            ],
+            "summary": "Go horizontal, keep servers stateless, move sessions and files to shared stores, and add redundancy at every tier."
+          }
+        },
+        {
+          "slug": "storage-and-caching",
+          "title": "Storage, Indexes, and Caching",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Pick a datastore by access pattern", "Implement cache-aside and name its failure mode"],
+          "topics": ["databases", "indexes", "caching"],
+          "content": {
+            "introduction": "Data storage decisions are access-pattern decisions: how you read and write determines whether you want SQL, a document store, a key-value cache, or some combination.",
+            "explanation": "Relational databases give transactions and joins with indexed lookups that keep reads logarithmic — a B-tree index turns a full table scan into ~log n page reads. They struggle when you need huge write throughput or flexible nested documents, which is where key-value and document stores earn their place. Caching sits in front of everything: in cache-aside, the application checks the cache first, loads the database on a miss, and writes the result back with a TTL. The hard part is invalidation — when the row changes, stale cache entries must be evicted or versioned, or users will see old data. Typical interview additions: a read replica to spread SELECT load, and a write-through path so hot rows stay fresh.",
+            "examples": [
+              {
+                "title": "Cache-aside read path",
+                "language": "javascript",
+                "code": "async function getProduct(id) {\n  const cached = await redis.get(`product:${id}`);\n  if (cached) return JSON.parse(cached); // hit: skip the DB\n\n  const rows = await db.query('SELECT * FROM products WHERE id = $1', [id]);\n  const product = rows[0] ?? null;\n  if (product) {\n    await redis.set(`product:${id}`, JSON.stringify(product), { EX: 300 });\n  }\n  return product;\n}",
+                "walkthrough": "On a hit the database is never touched. On a miss the app loads the row and stores it for five minutes; the TTL bounds how long stale data can survive if a write is not reflected in the cache."
+              }
+            ],
+            "useCase": "Read-heavy product catalogs, profile pages, and configuration lookups where a short staleness window is acceptable.",
+            "knowledgeCheck": [
+              {
+                "question": "In cache-aside, who loads the cache on a miss?",
+                "type": "mcq",
+                "options": ["The application, after reading the database", "The database automatically pushes to the cache", "The load balancer", "The client browser only"],
+                "correctIndex": 0,
+                "explanation": "The app owns the read path: cache first, fall back to the database, then populate the cache."
+              },
+              {
+                "question": "What is the classic weakness of caching?",
+                "type": "mcq",
+                "options": ["Invalidation — keeping cached data consistent with writes", "It makes reads slower", "It requires SQL", "It cannot store strings"],
+                "correctIndex": 0,
+                "explanation": "Stale entries after a write are the hard problem; TTLs, versioned keys, and explicit eviction are the usual mitigations."
+              }
+            ],
+            "summary": "Match the store to the access pattern, index what you filter on, and use cache-aside with a TTL — knowing invalidation is the real challenge."
+          }
+        },
+        {
+          "slug": "designing-a-url-shortener",
+          "title": "Case Study: Design a URL Shortener",
+          "order": 3,
+          "durationMinutes": 35,
+          "isPreview": false,
+          "objectives": ["Estimate capacity before designing", "Design a read-optimized redirect path"],
+          "topics": ["case-study", "key-generation", "capacity-planning"],
+          "content": {
+            "introduction": "The URL shortener is the interview classic because it forces every core decision: estimate scale, generate unique keys, store mappings, and serve a read path that is almost all traffic.",
+            "explanation": "Start with numbers: 100M new links per day is roughly 1,200 writes/second, and redirects are 100:1 reads, so reads dominate at ~100K/second. Key generation has two realistic options — a hash of the URL (needs collision handling and exposes duplicates) or an auto-incrementing ID encoded in base62 (unique by construction, ~7 characters covers 62^7 ≈ 3.5 trillion keys). Encode the counter, store id → long_url in SQL with the short code indexed, and put hot mappings in Redis because redirects must return in single-digit milliseconds. The write path is trivial; the design conversation should focus on the read path, analytics counters (asynchronous increments, never inline), and what happens when a link expires.",
+            "examples": [
+              {
+                "title": "Base62 key encoding",
+                "language": "javascript",
+                "code": "const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';\n\nfunction encodeId(id) {\n  let n = id;\n  let out = '';\n  while (n > 0) {\n    out = ALPHABET[n % 62] + out;\n    n = Math.floor(n / 62);\n  }\n  return out || '0';\n}\n\n// encodeId(123456) -> 'w7e': unique, short, no collision checking",
+                "walkthrough": "A monotonic ID plus base62 encoding guarantees unique short codes with no lookups. The database's primary key does the uniqueness work you would otherwise pay a retry loop for."
+              }
+            ],
+            "useCase": "Any 'design X' interview: estimate, generate keys, store, read path, scale the bottleneck.",
+            "knowledgeCheck": [
+              {
+                "question": "Why prefer an auto-incrementing ID over a random hash for short codes?",
+                "type": "mcq",
+                "options": ["IDs are unique by construction, so there are no collisions to resolve", "Random hashes are too long", "IDs are easier to remember", "Hashes cannot be base62 encoded"],
+                "correctIndex": 0,
+                "explanation": "A counter never collides; a hash requires collision detection and retry logic."
+              },
+              {
+                "question": "Where should the redirect read be served from in a high-traffic design?",
+                "type": "mcq",
+                "options": ["A cache like Redis, falling back to the database", "A full table scan every time", "The client", "A blocking lock"],
+                "correctIndex": 0,
+                "explanation": "Reads massively outnumber writes and redirects are latency-sensitive, so hot mappings belong in the cache."
+              }
+            ],
+            "summary": "Estimate first, generate keys with a counter, store mappings indexed by short code, and serve the read-heavy path from cache."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "behavioral-and-communication",
+      "title": "Behavioral & Communication Skills",
+      "description": "Structure your answers, narrate your code, and ask the questions that show senior judgment.",
+      "order": 4,
+      "estimatedHours": 10,
+      "prerequisites": ["system-design-foundations"],
+      "completionCriteria": "Deliver a two-minute STAR answer and talk through a practice problem end to end without going silent.",
+      "lessons": [
+        {
+          "slug": "star-method",
+          "title": "The STAR Method for Behavioral Questions",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Structure a behavioral answer in four parts", "Quantify the result of your actions"],
+          "topics": ["behavioral", "star", "storytelling"],
+          "content": {
+            "introduction": "Behavioral questions ('tell me about a time you failed') are scored like system design: structure, specificity, and evidence matter more than the story's drama.",
+            "explanation": "STAR stands for Situation, Task, Action, Result. Situation sets context in one or two sentences; Task explains what you were personally responsible for; Action is the bulk of the answer — what you specifically did, step by step, using 'I' rather than 'we'; Result closes with a measurable outcome and, ideally, what you learned. Interviewers listen for ownership: a candidate who only describes what the team did has not demonstrated their contribution. Prepare five stories that overlap — a conflict, a failure, a ambiguous requirement, a technical trade-off, a mentoring moment — and map questions onto them. Keep each answer around two minutes and stop; you can always expand if asked.",
+            "examples": [
+              {
+                "title": "A STAR answer skeleton",
+                "language": "javascript",
+                "code": "const answer = {\n  situation: 'Our team shipped weekly but QA still found 12+ escaped bugs per release.',\n  task: 'I owned the CI pipeline and was asked to cut feedback time.',\n  action: [\n    'Added a smoke-test stage on every merge to staging',\n    'Required a preview deployment on each pull request',\n    'Quarantined flaky tests so red builds stayed trustworthy'\n  ],\n  result: 'Escaped bugs fell to 2 per release; cycle time dropped from 5 days to 2.',\n  learned: 'Feedback speed matters more than test count.'\n};\n// ~90 seconds spoken: one line of context, 'I' owns the action, numbers prove the result",
+                "walkthrough": "Context is one sentence, the action uses concrete steps only you performed, and the result is a number — that is what makes the answer verifiable instead of vague."
+              }
+            ],
+            "useCase": "Leadership, conflict, failure, and impact questions at any interview stage; also useful in performance reviews.",
+            "knowledgeCheck": [
+              {
+                "question": "What does the T in STAR stand for?",
+                "type": "mcq",
+                "options": ["Task", "Time", "Trade-off", "Team"],
+                "correctIndex": 0,
+                "explanation": "Task states what you were specifically responsible for, between the context and your actions."
+              },
+              {
+                "question": "Which part of a STAR answer should carry measurable outcomes?",
+                "type": "mcq",
+                "options": ["Result", "Situation", "Task", "Introduction"],
+                "correctIndex": 0,
+                "explanation": "Numbers in the Result are what make the claim credible and memorable."
+              }
+            ],
+            "summary": "Situation, Task, Action, Result — one sentence of context, specific personal actions, quantified outcome."
+          }
+        },
+        {
+          "slug": "talking-through-your-code",
+          "title": "Talking Through Your Code",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Narrate your approach while you type", "Recover gracefully when you get stuck"],
+          "topics": ["communication", "narration", "debugging"],
+          "content": {
+            "introduction": "Silence is the most common avoidable failure in coding interviews. Interviewers score your reasoning in real time, and they can only score what they hear.",
+            "explanation": "A dependable script: restate the problem, state constraints, announce your approach and its complexity, code while narrating each block's intent, then dry-run your solution with a concrete example before declaring it done. When you hit a wall, do not freeze — say what you know ('the two-pointer invariant breaks because the array is unsorted'), try a smaller example, or switch approaches out loud. Ask for clarification whenever a requirement is ambiguous; that is a positive signal. If given a hint, acknowledge it, use it, and explain how it changes your plan — interviewers regularly give hints specifically to see whether you can integrate them.",
+            "examples": [
+              {
+                "title": "A narrated solution skeleton",
+                "language": "javascript",
+                "code": "// 1. Restate: return indices of two numbers that add to target\n// 2. Constraint: one pass preferred -> need O(1) complement lookup\n// 3. Approach: hash map of value -> index, check complement first\nfunction twoSum(nums, target) {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    if (seen.has(target - nums[i])) return [seen.get(target - nums[i]), i];\n    seen.set(nums[i], i);\n  }\n  return [];\n}\n// 4. Dry run: [2,7,11,15], target 9 -> i=0 stores 2; i=1 finds 7 -> [0,1]\n// 5. Complexity: O(n) time, O(n) space",
+                "walkthrough": "Each comment is a beat you say out loud: restate, constraint, approach, code, verify, complexity. The dry run at the end catches off-by-one errors before the interviewer does."
+              }
+            ],
+            "useCase": "Every coding interview, pairing session, and design review where your thinking is the deliverable.",
+            "knowledgeCheck": [
+              {
+                "question": "When should you state the complexity of your solution?",
+                "type": "mcq",
+                "options": ["As part of explaining the approach and again when finished", "Only if the interviewer asks nothing else", "Never — it is assumed", "Before understanding the problem"],
+                "correctIndex": 0,
+                "explanation": "Stating complexity up front shows you are choosing between approaches, not just typing."
+              },
+              {
+                "question": "What is the best move when you are stuck?",
+                "type": "mcq",
+                "options": ["Say what you know, try a smaller example, and consider another approach out loud", "Sit silently until the answer appears", "Guess randomly", "Ask for a different problem"],
+                "correctIndex": 0,
+                "explanation": "Narrating your blocker lets the interviewer help and demonstrates how you debug under uncertainty."
+              }
+            ],
+            "summary": "Restate, plan, narrate, verify, state complexity. Silence scores zero; a wrong answer with clear reasoning often still scores."
+          }
+        },
+        {
+          "slug": "clarifying-questions-and-tradeoffs",
+          "title": "Clarifying Questions and Trade-offs",
+          "order": 3,
+          "durationMinutes": 25,
+          "isPreview": false,
+          "objectives": ["Ask questions that reveal requirements", "Present options as trade-offs rather than absolutes"],
+          "topics": ["requirements", "trade-offs", "seniority-signal"],
+          "content": {
+            "introduction": "The questions you ask are the fastest signal of seniority. Senior candidates turn vague prompts into bounded problems before proposing anything.",
+            "explanation": "For design questions, ask about scale (users, requests per second, data size), consistency needs (is stale data acceptable, and for how long), and failure tolerance (what must keep working when a dependency dies). For coding questions, clarify input constraints, duplicates, and what to return on no match — these decide your algorithm. Then present choices as explicit trade-offs: 'a relational store gives us transactions at the cost of write throughput; a key-value store flips that' is a senior answer, while 'we should use Redis' is not. Also state what you are deliberately not solving — scope boundaries show judgment. Finally, ask one thoughtful question yourself at the end: how the team handles on-call, or how requirements reach engineers.",
+            "examples": [
+              {
+                "title": "A question checklist to internalize",
+                "language": "javascript",
+                "code": "const designQuestions = [\n  'What is the expected scale: users, QPS, and data size?',\n  'Do we need strong consistency, or is eventual fine?',\n  'Which failure modes must we tolerate?',\n  'What latency budget does this feature have?'\n];\n\nconst tradeoff =\n  'Option A: SQL gives transactions and joins, but writes scale to a single primary.\\n' +\n  'Option B: key-value scales writes, but we lose joins and add denormalization work.';\n// Pick one, say why it fits the stated requirements, and name the cost.",
+                "walkthrough": "The questions map to requirements that actually change the architecture; the trade-off statement ties your pick back to those requirements instead of asserting a preference."
+              }
+            ],
+            "useCase": "Opening any system design interview and closing any technical proposal with a defensible choice.",
+            "knowledgeCheck": [
+              {
+                "question": "Which question best clarifies a system design requirement?",
+                "type": "mcq",
+                "options": ["What scale and consistency does this need?", "Which database is most popular?", "What framework do you use?", "How big is the team?"],
+                "correctIndex": 0,
+                "explanation": "Scale and consistency directly determine the architecture; the others do not."
+              },
+              {
+                "question": "What makes a design choice sound senior?",
+                "type": "mcq",
+                "options": ["Presenting it as a trade-off tied to stated requirements", "Naming the newest technology", "Avoiding alternatives entirely", "Choosing the fastest option"],
+                "correctIndex": 0,
+                "explanation": "Requirements-based trade-offs show judgment; asserting one 'best' tool ignores context."
+              }
+            ],
+            "summary": "Clarify scale, consistency, and failure tolerance first. Offer options as trade-offs and name the cost of your choice."
+          }
+        }
+      ]
+    }
+  ]
+}

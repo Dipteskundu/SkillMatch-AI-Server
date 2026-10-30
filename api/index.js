@@ -2,8 +2,9 @@ import "../config/dotenv.js";
 import express from "express";
 import cors from "cors";
 
-import { connectDB } from "../config/db.js";
+import { connectDB, getDB } from "../config/db.js";
 import { loadEnv } from "../config/env.js";
+import { migrateDemoPasswords } from "../services/passwordMigration.js";
 
 import jobsRoutes from "../routes/jobs.routes.js";
 import companiesRoutes from "../routes/companies.routes.js";
@@ -21,18 +22,31 @@ import interviewsRoutes from "../routes/interviews.routes.js";
 import notificationsRoutes from "../routes/notifications.routes.js";
 import chatbotRoutes from "../routes/chatbot.routes.js";
 import tasksRoutes from "../routes/tasks.routes.js";
+import learningRoutes from "../routes/learning.routes.js";
+import { ensureLearningIndexes } from "../config/learningIndexes.js";
+import { verifyToken } from "../middleware/auth.js";
+import { requireAdmin } from "../middleware/recruiterGate.js";
 
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
-const { env, errors, warnings, firebaseErrors, isProd } = loadEnv();
+// Learning Hub indexes: create once per process, after the first successful
+// connection, without blocking boot on failure.
+let indexPromise = null;
+function ensureIndexesOnce() {
+  if (!indexPromise) {
+    indexPromise = ensureLearningIndexes(getDB()).catch((error) => {
+      console.warn("Learning Hub index setup skipped:", error.message);
+    });
+  }
+  return indexPromise;
+}
+
+const { env, errors, warnings, isProd } = loadEnv();
 
 if (warnings.length) {
   warnings.forEach((msg) => console.warn(`ENV WARN: ${msg}`));
-}
-if (firebaseErrors.length) {
-  firebaseErrors.forEach((msg) => console.warn(`ENV FIREBASE: ${msg}`));
 }
 if (errors.length) {
   errors.forEach((msg) =>
@@ -55,18 +69,14 @@ app.use(
     origin(origin, callback) {
       // Allow server-to-server or same-origin requests (no Origin header)
       if (!origin) return callback(null, true);
-
       // Local dev convenience: allow localhost / 127.0.0.1 on any port
       if (!isProd && localhostOrigin.test(origin)) {
         return callback(null, true);
       }
-
       // If no allowlist specified, allow all
       if (!corsOrigins) return callback(null, true);
-
       // Otherwise, enforce allowlist
       if (corsOrigins.includes(origin)) return callback(null, true);
-
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: false,
@@ -105,6 +115,8 @@ app.use(async (req, res, next) => {
 
   try {
     await connectDB();
+    await ensureIndexesOnce();
+    await migrateDemoPasswords(getDB());
     return next();
   } catch (error) {
     error.status = error.status || 500;
@@ -112,9 +124,39 @@ app.use(async (req, res, next) => {
   }
 });
 
+// Everything under /api needs a JWT except the guest-browsable reads below.
+const PUBLIC_GET = [
+  /^\/jobs$/,
+  /^\/jobs\/[^/]+$/,
+  /^\/jobs\/[^/]+\/fit$/,
+  /^\/companies$/,
+  /^\/v1\/companies$/,
+  /^\/v1\/learning\/paths$/,
+  /^\/v1\/learning\/paths\/[^/]+$/,
+  /^\/v1\/assessments$/,
+];
+
+const ADMIN_ONLY = [/^\/admin\//, /^\/dashboard\/admin$/, /^\/v1\/admin\//];
+
+app.use("/api", (req, res, next) => {
+  const path = req.path.replace(/\/+$/, "") || "/";
+
+  if (req.method === "POST" && ["/auth/login", "/auth/register", "/auth/refresh", "/auth/logout"].includes(path)) {
+    return next();
+  }
+  if (req.method === "GET" && PUBLIC_GET.some((re) => re.test(path))) {
+    return next();
+  }
+
+  return verifyToken(req, res, () => {
+    if (ADMIN_ONLY.some((re) => re.test(path))) return requireAdmin(req, res, next);
+    return next();
+  });
+});
+
+app.use("/api/auth", authRoutes);
 app.use(jobsRoutes);
 app.use(companiesRoutes);
-app.use(authRoutes);
 app.use(dashboardRoutes);
 app.use(communicationRoutes);
 app.use(transparencyRoutes);
@@ -128,6 +170,7 @@ app.use(interviewsRoutes);
 app.use(notificationsRoutes);
 app.use(chatbotRoutes);
 app.use(tasksRoutes);
+app.use(learningRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
