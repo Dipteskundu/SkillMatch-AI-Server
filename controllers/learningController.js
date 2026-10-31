@@ -5,6 +5,13 @@
 
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
+import { generateWithFallback } from "../services/gemini.service.js";
+
+// HTML escape targets are assembled from parts: a literal "&" in
+// source has proven vulnerable to entity-decoding by tooling in transit.
+const ET_AMP = "&" + "amp;";
+const ET_LT = "&" + "lt;";
+const ET_GT = "&" + "gt;";
 
 const PATH_SUMMARY_FIELDS = {
   _id: 1,
@@ -172,7 +179,7 @@ export async function updateProgress(req, res) {
   try {
     const db = getDB();
     const uid = req.user.uid;
-    const { lessonId, completed, timeSpentMinutes } = req.body;
+    const { lessonId, completed, timeSpentMinutes, planId } = req.body;
 
     if (!lessonId || completed === undefined) {
       return res.status(400).json({
@@ -196,19 +203,30 @@ export async function updateProgress(req, res) {
     }
 
     const now = new Date();
+    // Link the row to the caller's plan so completions count toward its
+    // percentage (listMyPlans aggregates learning_progress by planId).
+    let storedPlanId = null;
+    if (planId) {
+      try {
+        storedPlanId = new ObjectId(String(planId));
+      } catch {
+        storedPlanId = null;
+      }
+    }
+    const set = {
+      userId: uid,
+      lessonId,
+      completed,
+      timeSpentMinutes: completed ? timeSpentMinutes : (timeSpentMinutes || 0),
+      completedAt: completed ? now : undefined,
+      updatedAt: now,
+    };
+    if (storedPlanId) set.planId = storedPlanId;
     await db.collection("learning_progress").updateOne(
       { userId: uid, lessonId },
       {
-        $set: {
-          userId: uid,
-          lessonId,
-          completed,
-          timeSpentMinutes: completed ? timeSpentMinutes : (timeSpentMinutes || 0),
-          completedAt: completed ? now : undefined,
-          updatedAt: now,
-        },
+        $set: set,
         $setOnInsert: {
-          planId: null,
           createdAt: now,
         },
       },
@@ -252,6 +270,107 @@ export async function updateProgress(req, res) {
 }
 
 /**
+ * Teaching prose for an AI-plan lesson — those lessons live only inside
+ * the owner's plan document, so there is no learning_lessons doc to read.
+ * AI text is escaped and paragraph-wrapped: safe HTML for the client's
+ * dangerouslySetInnerHTML without adding a sanitizer dependency.
+ */
+async function generatePlanLessonContent(plan, module, lesson) {
+  const prompt = [
+    "You are a technical mentor writing lesson material for a job-skills learning platform.",
+    "Write the lesson body the learner reads in one sitting.",
+    "",
+    `Learner: ${plan.startingLevel || "beginner"} level. Goal: ${plan.learningGoal || plan.title}.`,
+    `Module: ${module.title} (topics: ${(module.topics || []).join(", ") || "n/a"}).`,
+    `Lesson: ${lesson.title} (${lesson.kind === "activity" ? "hands-on activity" : "lesson"}, ~${lesson.durationMinutes} minutes).`,
+    lesson.topics?.length ? `Cover exactly these topics: ${lesson.topics.join(", ")}.` : "",
+    "",
+    "Rules:",
+    "- Plain prose in paragraphs separated by blank lines. NO markdown, NO headings, NO code fences.",
+    lesson.kind === "activity"
+      ? "- This is a guided exercise: numbered steps in prose, what to try, what to observe."
+      : "- Explain the concepts, give concrete examples, end with what to practice next.",
+    "- 300 to 450 words.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const { text } = await generateWithFallback(prompt);
+  const escapeHtml = (s) =>
+    s.replace(/&/g, ET_AMP)
+      .replace(/</g, ET_LT)
+      .replace(/>/g, ET_GT);
+  return {
+    introduction: `Generated for your plan "${plan.title}" around ${
+      plan.startingLevel || "beginner"
+    } level.`,
+    explanation: text
+      .trim()
+      .split(/\n\s*\n/)
+      .map((p) => `<p>${escapeHtml(p)}</p>`)
+      .join(""),
+  };
+}
+
+/**
+ * Resolve an AI-plan lesson from the caller's own plan. Owner-scoped by
+ * userId — a plan lesson id must never serve another user's request.
+ * Prose is generated once on first open and cached into the plan.
+ */
+async function findPlanLesson(db, uid, lessonId) {
+  const plan = await db
+    .collection("user_learning_plans")
+    .findOne({ userId: uid, "modules.lessons.lessonId": lessonId });
+  if (!plan) return null;
+
+  let ownerModule = null;
+  let item = null;
+  for (const mod of plan.modules || []) {
+    const found = (mod.lessons || []).find((l) => String(l.lessonId) === lessonId);
+    if (found) {
+      ownerModule = mod;
+      item = found;
+      break;
+    }
+  }
+  if (!item) return null;
+
+  if (!item.content) {
+    try {
+      item.content = await generatePlanLessonContent(plan, ownerModule, item);
+      // Cache-on-first-open so later opens skip the AI round trip.
+      // updatedAt is deliberately NOT touched — plans sort on it in my-plans.
+      await db.collection("user_learning_plans").updateOne(
+        { _id: plan._id, "modules.lessons.lessonId": lessonId },
+        { $set: { "modules.$[m].lessons.$[l].content": item.content } },
+        {
+          arrayFilters: [
+            { "m.lessons.lessonId": lessonId },
+            { "l.lessonId": lessonId },
+          ],
+        },
+      );
+    } catch (err) {
+      console.error("Plan lesson prose generation failed:", err?.message || err);
+      // Metadata-only lesson still renders; prose retries on next open.
+    }
+  }
+
+  return {
+    _id: item.lessonId,
+    moduleId: null,
+    title: item.title,
+    order: item.order,
+    durationMinutes: item.durationMinutes,
+    kind: item.kind,
+    topics: item.topics || [],
+    objectives: item.topics || [],
+    content: item.content || {},
+    planId: String(plan._id),
+  };
+}
+
+/**
  * GET /api/v1/learning/lessons/:id
  * Full lesson content requires auth + enrollment; guests see preview only (LH-005).
  */
@@ -266,6 +385,12 @@ export async function getLessonById(req, res) {
       lesson = await db.collection("learning_lessons").findOne({ _id: new ObjectId(lessonId) });
     } else {
       lesson = await db.collection("learning_lessons").findOne({ slug: String(lessonId).toLowerCase().trim() });
+    }
+
+    // AI-plan lessons have no learning_lessons document — resolve them from
+    // the caller's own plan. Auth-only: guests keep the 404 (LH-005 posture).
+    if (!lesson && req.user?.uid) {
+      lesson = await findPlanLesson(db, req.user.uid, lessonId);
     }
 
     if (!lesson) {

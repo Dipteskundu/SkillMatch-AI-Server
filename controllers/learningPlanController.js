@@ -113,7 +113,17 @@ export async function enrollInPath(req, res) {
       .collection("user_learning_plans")
       .findOne({ userId: uid, sourcePathId: path._id });
     if (existing) {
-      return res.status(200).json({ success: true, data: existing, created: false });
+      // completedLessonIds lets clients resume at the next lesson on re-start
+      // instead of jumping back to lesson 1.
+      const doneRows = await db
+        .collection("learning_progress")
+        .find({ userId: uid, planId: existing._id, completed: true })
+        .toArray();
+      return res.status(200).json({
+        success: true,
+        data: { ...existing, completedLessonIds: doneRows.map((r) => r.lessonId) },
+        created: false,
+      });
     }
 
     const modules = await db
@@ -188,7 +198,7 @@ export async function enrollInPath(req, res) {
     const result = await db.collection("user_learning_plans").insertOne(plan);
     return res.status(201).json({
       success: true,
-      data: { ...plan, _id: result.insertedId },
+      data: { ...plan, _id: result.insertedId, completedLessonIds: [] },
       created: true,
     });
   } catch (error) {
@@ -306,6 +316,27 @@ export async function listMyPlans(req, res) {
       .sort({ updatedAt: -1 })
       .toArray();
 
+    // AI-plan lessons saved before per-lesson ids existed cannot be
+    // deep-linked ("Continue" built `?lesson=undefined` and 404'd) —
+    // assign + persist ids once here so old plans heal themselves.
+    for (const plan of plans) {
+      if (plan.source !== "ai") continue;
+      let changed = false;
+      for (const mod of plan.modules || []) {
+        for (const lesson of mod.lessons || []) {
+          if (!lesson.lessonId) {
+            lesson.lessonId = String(new ObjectId());
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        await db
+          .collection("user_learning_plans")
+          .updateOne({ _id: plan._id }, { $set: { modules: plan.modules } });
+      }
+    }
+
     const planIds = plans.map((p) => p._id);
     // learning_progress rows are written by Phase 3 with completed: true.
     const progressRows = planIds.length
@@ -313,14 +344,36 @@ export async function listMyPlans(req, res) {
           .collection("learning_progress")
           .aggregate([
             { $match: { userId: uid, planId: { $in: planIds }, completed: true } },
-            { $group: { _id: "$planId", done: { $sum: 1 } } },
+            { $group: { _id: "$planId", done: { $sum: 1 }, completedLessonIds: { $push: "$lessonId" } } },
           ])
           .toArray()
       : [];
-    const doneByPlan = new Map(progressRows.map((r) => [String(r._id), r.done]));
+    const doneByPlan = new Map(progressRows.map((r) => [String(r._id), r]));
+
+    // 56 days of completed-lesson activity (LH-025 dashboards): one row per
+    // day with lesson count and tracked minutes, so the client can bucket
+    // weekly bars, streaks and the weekly goal without a second endpoint.
+    const since = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000);
+    const activityRows = await db
+      .collection("learning_progress")
+      .find({ userId: uid, completed: true, completedAt: { $gte: since } })
+      .project({ completedAt: 1, timeSpentMinutes: 1 })
+      .toArray();
+    const activityByDay = new Map();
+    for (const row of activityRows) {
+      const day = new Date(row.completedAt).toISOString().slice(0, 10);
+      const bucket = activityByDay.get(day) || { day, lessons: 0, minutes: 0 };
+      bucket.lessons += 1;
+      bucket.minutes += Number(row.timeSpentMinutes) || 0;
+      activityByDay.set(day, bucket);
+    }
+    const activity = [...activityByDay.values()].sort((a, b) =>
+      a.day < b.day ? -1 : 1,
+    );
 
     const data = plans.map((plan) => {
-      const done = doneByPlan.get(String(plan._id)) || 0;
+      const row = doneByPlan.get(String(plan._id));
+      const done = row?.done || 0;
       const total = plan.lessonCount || 0;
       return {
         ...plan,
@@ -329,10 +382,12 @@ export async function listMyPlans(req, res) {
           totalLessons: total,
           percent: total ? Math.min(100, Math.round((done / total) * 100)) : 0,
         },
+        // Lets clients compute "next lesson to resume" client-side.
+        completedLessonIds: row?.completedLessonIds || [],
       };
     });
 
-    res.status(200).json({ success: true, data, count: data.length });
+    res.status(200).json({ success: true, data, count: data.length, activity });
   } catch (error) {
     console.error("GET /learning/my-plans failed:", error);
     return fail(res, 500, "Failed to load your plans");

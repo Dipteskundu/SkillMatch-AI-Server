@@ -2,6 +2,10 @@
 // Pure functions for AI plan generation (Phase 2) — no DB, no HTTP.
 // Kept side-effect free so the validator and the AI-response schema
 // normalizer can be unit-tested directly in Phase 4.
+// ObjectId is imported as a data type only (unique lesson ids), never
+// used to talk to the database.
+
+import { ObjectId } from "mongodb";
 
 const REQUIRED_FIELDS = ["goal", "existingSkills", "proficiency", "targetOutcome", "weeklyHours"];
 
@@ -320,6 +324,12 @@ export function normalizePlan(raw, answers) {
 
       lessons.push({
         order: lessons.length + 1,
+        // Deep-link id for the lesson player + progress rows. AI output has
+        // no ids, so we mint them; a valid incoming id (untouched module on
+        // regeneration) is kept so completed rows stay attached to it.
+        lessonId: /^[a-f0-9]{24}$/i.test(rawLesson.lessonId)
+          ? rawLesson.lessonId
+          : String(new ObjectId()),
         title: lessonTitle,
         kind: rawLesson.kind === "activity" ? "activity" : "lesson",
         durationMinutes,

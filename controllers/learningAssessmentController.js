@@ -408,6 +408,17 @@ export async function listAssessmentsSummary(req, res) {
     const avgScore = total ? Math.round(totalScore / total) : 0;
     const overallCorrect = totalCorrect;
 
+    // Topic-level correctness (LH-019 overview) — weakest topics first so the
+    // dashboard renders strengths/weaknesses without extra aggregation.
+    const topicPerformance = Object.entries(topicCounts)
+      .map(([topic, t]) => ({
+        topic,
+        correct: t.correct,
+        total: t.total,
+        percent: t.total ? Math.round((t.correct / t.total) * 100) : 0,
+      }))
+      .sort((a, b) => a.percent - b.percent);
+
     return res.status(200).json({
       success: true,
       data: {
@@ -415,6 +426,7 @@ export async function listAssessmentsSummary(req, res) {
         averageScore: avgScore,
         bestScore,
         overallCorrect,
+        topicPerformance,
         weakTopics: Object.keys(topicCounts)
           .filter(
             (t) => topicCounts[t].correct / topicCounts[t].total < 0.6,
