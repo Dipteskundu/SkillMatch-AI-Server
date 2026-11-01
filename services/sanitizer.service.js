@@ -36,3 +36,43 @@ export function sanitizeResponse(text) {
 
   return text;
 }
+
+// Only these keys are safe to send to the AI provider.
+const PII_KEYS = new Set([
+  "email", "phone", "phonenumber", "phone_number", "address",
+  "dateofbirth", "dob", "nationalid", "nid", "ssn", "salary", "expectedsalary",
+]);
+
+/**
+ * Strips PII (emails, phone numbers, addresses) out of a user context object
+ * before it reaches the AI provider. Recurses into nested objects/arrays.
+ * @param {object} obj
+ * @returns {object} deep copy with PII removed
+ */
+export function stripPII(obj) {
+  if (Array.isArray(obj)) {
+    return obj.map((item) => (item && typeof item === "object" ? stripPII(item) : item));
+  }
+  if (obj && typeof obj === "object") {
+    const clean = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (PII_KEYS.has(key.toLowerCase().replace(/[_\s-]/g, ""))) continue;
+      clean[key] = value && typeof value === "object" ? stripPII(value) : value;
+    }
+    return clean;
+  }
+  return obj;
+}
+
+/**
+ * Removes PII patterns embedded inside free text (prompts, resumes snippets).
+ * @param {string} text
+ * @returns {string}
+ */
+export function stripPIIFromText(text) {
+  if (typeof text !== "string") return "";
+  return text
+    .replace(/[\w.+-]+@[\w-]+\.[\w.]{2,}/g, "[redacted-email]")
+    .replace(/(?:\+?88)?01[3-9]\d{8}/g, "[redacted-phone]")
+    .replace(/\b\d{3}[-.\s]?\d{6,10}\b/g, "[redacted-number]");
+}

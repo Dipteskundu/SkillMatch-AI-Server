@@ -23,6 +23,8 @@ import notificationsRoutes from "../routes/notifications.routes.js";
 import chatbotRoutes from "../routes/chatbot.routes.js";
 import tasksRoutes from "../routes/tasks.routes.js";
 import learningRoutes from "../routes/learning.routes.js";
+import interviewPrepRoutes from "../routes/interviewPrep.routes.js";
+import agentsRoutes from "../routes/agents.routes.js";
 import { ensureLearningIndexes } from "../config/learningIndexes.js";
 import { verifyToken } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/recruiterGate.js";
@@ -171,6 +173,8 @@ app.use(notificationsRoutes);
 app.use(chatbotRoutes);
 app.use(tasksRoutes);
 app.use(learningRoutes);
+app.use(interviewPrepRoutes);
+app.use(agentsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
