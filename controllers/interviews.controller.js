@@ -32,9 +32,8 @@ async function sendInterviewNotification({ db, userId, notification }) {
   try {
     await db.collection("notifications").insertOne(notification);
 } catch (err) {
-        // error handled silently
-      }
-    }
+    // Error handled silently.
+  }
 };
 
 export const scheduleInterview = async (req, res) => {

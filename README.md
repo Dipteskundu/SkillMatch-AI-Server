@@ -10,7 +10,7 @@
 
 <p>
   <img alt="Status" src="https://img.shields.io/badge/Status-Active%20Development-6E56CF?style=for-the-badge" />
-  <img alt="Node" src="https://img.shields.io/badge/Node-20.x-339933?style=for-the-badge&logo=node.js&logoColor=white" />
+  <img alt="Node" src="https://img.shields.io/badge/Node-26.x-339933?style=for-the-badge&logo=node.js&logoColor=white" />
   <img alt="Express" src="https://img.shields.io/badge/Express.js-API-000000?style=for-the-badge&logo=express&logoColor=white" />
   <img alt="MongoDB" src="https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white" />
   <img alt="Firebase Admin" src="https://img.shields.io/badge/Firebase%20Admin-Auth-FFCA28?style=for-the-badge&logo=firebase&logoColor=000" />
@@ -112,7 +112,7 @@ Job listing and recruiter views are designed to be filterable; modules are separ
 
 | Category | Technology |
 |---|---|
-| Runtime | Node.js 20.x |
+| Runtime | Node.js 26.x |
 | Framework | Express.js |
 | Database | MongoDB (Atlas) |
 | Auth | Firebase Admin (verify Firebase ID tokens) |
@@ -236,7 +236,7 @@ To make the server more production‑secure, consider:
 ## ⚙️ Installation & Setup
 
 ### ✅ Prerequisites
-- Node.js **20.x**
+- Node.js **26.x**
 - MongoDB URI (Atlas recommended)
 - Firebase Admin configured in backend services
 - (Optional) Gemini API key for AI features
@@ -339,7 +339,7 @@ curl -X POST http://localhost:5000/api/auth/sync-user \
 
 ### ✅ Deploy to Vercel (recommended)
 This backend is Vercel-ready:
-- `vercel.json` routes all traffic to `api/index.js`.
+- `vercel.json` routes all traffic to the exported Express app in `index.js`, including `/`, `/health`, and `/api/*`.
 
 Steps:
 1. Create a Vercel project and import `SkillMatch-AI-Server/`.

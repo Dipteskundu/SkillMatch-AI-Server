@@ -23,7 +23,7 @@ Verification scripts:
 
 ## Prerequisites
 
-- Node.js 20.x (see `package.json`)
+- Node.js 26.x (see `package.json`)
 - A Gemini API key from Google AI Studio
 
 ## Installation

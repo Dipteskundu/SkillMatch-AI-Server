@@ -38,6 +38,22 @@ router.get("/api/jobs", async (req, res) => {
 router.post("/api/jobs", async (req, res) => {
   try {
     const db = getDB();
+    const {
+      title,
+      company,
+      location,
+      salary,
+      skills,
+      salaryRange,
+      experienceLevel,
+      employmentType,
+      posted,
+      postedBy,
+      description,
+      responsibilities,
+      vacancies,
+      deadline,
+    } = req.body;
 
     // 1️⃣ Extract fields from body
     if (!title || !company || !location) {
@@ -123,6 +139,12 @@ router.post("/api/jobs", async (req, res) => {
     });
   } catch (error) {
     // POST Job Error handled via response
+    return res.status(500).json({
+      success: false,
+      message: "Server error while creating job",
+    });
+  }
+});
 
 // GET: Get Single Job By ID
 // =======================================
@@ -278,8 +300,7 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
 
       await db.collection("skillGaps").insertOne(skillGapDoc);
     } catch (gapError) {
-        // Skill gap analysis error handled silently
-      }
+      // Skill gap analysis error handled silently
     }
     // --- Skill Gap Detection End ---
 
@@ -330,6 +351,13 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
     });
   } catch (error) {
     // APPLY Job Error handled via response
+    return res.status(500).json({
+      success: false,
+      message: "Server error while applying to job",
+    });
+  }
+});
+
 // POST: Save Job
 // =======================================
 router.post("/api/jobs/:id/save", async (req, res) => {
@@ -375,7 +403,6 @@ router.post("/api/jobs/:id/save", async (req, res) => {
       message: "Job saved successfully",
     });
   } catch (error) {
-} catch (error) {
     res.status(500).json({
       success: false,
       message: "Server error while saving job",
@@ -545,7 +572,8 @@ router.get("/api/admin/jobs/pending", async (req, res) => {
   try {
     const db = getDB();
     const jobs = await db
-.res.find({ status: "pending" })
+      .collection("find_jobs")
+      .find({ status: "pending" })
       .toArray();
     res.status(200).json({ success: true, count: jobs.length, data: jobs });
   } catch (error) {
