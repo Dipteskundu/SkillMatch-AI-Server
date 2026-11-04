@@ -23,6 +23,6 @@ export async function migrateDemoPasswords(db) {
     if (typeof user.password === "string" && user.password.startsWith("$2")) continue;
     const hash = await bcrypt.hash(password, 10);
     await users.updateOne({ _id: user._id }, { $set: { password: hash } });
-    console.log(`Seeded demo password for ${email}`);
+    // output removed
   }
 }

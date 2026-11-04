@@ -43,12 +43,12 @@ export const handleAskChatbot = async (req, res) => {
         { upsert: true }
       );
     } catch (histErr) {
-      console.error("Chat history save error (non-fatal):", histErr.message);
+      // error handled silently
     }
 
     return res.status(200).json({ success: true, assistant: answer, link });
   } catch (error) {
-    console.error("Chatbot Controller Error:", error);
+    // error handled silently
     return res.status(500).json({
       success: false,
       message: "I encountered an error while processing your request. Please try again.",
@@ -74,7 +74,7 @@ export const getChatHistory = async (req, res) => {
       messages: record?.messages || [],
     });
   } catch (error) {
-    console.error("Get Chat History Error:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to fetch chat history." });
   }
 };
@@ -95,7 +95,7 @@ export const deleteChatHistory = async (req, res) => {
 
     return res.status(200).json({ success: true, message: "Chat history cleared." });
   } catch (error) {
-    console.error("Delete Chat History Error:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to delete chat history." });
   }
 };

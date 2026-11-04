@@ -88,7 +88,7 @@ async function startTest(req, res) {
       timeLimit,
     });
   } catch (error) {
-    console.error("Start Communication Test Error:", error);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: error.message || "Server error while starting test",
@@ -190,7 +190,7 @@ async function submitTest(req, res) {
       feedback: scores.feedback,
     });
   } catch (error) {
-    console.error("Submit Communication Test Error:", error);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: error.message || "Server error while submitting test",
@@ -240,7 +240,7 @@ async function getResult(req, res) {
       },
     });
   } catch (error) {
-    console.error("Get Result Error:", error);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: "Server error while fetching result",
@@ -291,7 +291,7 @@ async function getSession(req, res) {
       status: session.status,
     });
   } catch (error) {
-    console.error("Get Session Error:", error);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: "Server error",

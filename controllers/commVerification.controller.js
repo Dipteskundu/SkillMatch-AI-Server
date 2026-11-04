@@ -90,7 +90,7 @@ async function startCommVerification(req, res) {
       timeLimit,
     });
   } catch (error) {
-    console.error("Start Comm Verification Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 }
@@ -169,7 +169,7 @@ async function submitCommVerification(req, res) {
       isCommunicationVerified: passed,
     });
   } catch (error) {
-    console.error("Submit Comm Verification Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 }
@@ -196,7 +196,7 @@ async function getCommVerificationStatus(req, res) {
       },
     });
   } catch (error) {
-    console.error("Comm Verification Status Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 }

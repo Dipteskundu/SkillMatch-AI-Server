@@ -10,10 +10,10 @@ loadEnv();
         await connectDB();
         // Fake UID to test how it builds context and calls Gemini
         const ans = await askChatbot("test-uid", "candidate", "how many jobs?");
-        console.log("SUCCESS:", ans);
+        // test output removed
     } catch(err) {
-        console.error("FAILED:", err.message);
-        console.error(err.stack);
+        // test output removed
+        // test output removed
     } finally {
         process.exit(0);
     }

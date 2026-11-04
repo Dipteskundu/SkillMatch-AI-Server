@@ -70,7 +70,7 @@ router.get("/api/dashboard/candidate/:uid", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Candidate Dashboard Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -157,7 +157,7 @@ router.get("/api/dashboard/recruiter/:uid", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Recruiter Dashboard Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -216,7 +216,7 @@ router.get("/api/dashboard/admin", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Admin Dashboard Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -267,7 +267,7 @@ router.put("/api/applications/:id/status", async (req, res) => {
       .status(200)
       .json({ success: true, message: "Status updated successfully" });
   } catch (error) {
-    console.error("Status Update Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -312,7 +312,7 @@ router.get("/api/applications/:id", async (req, res) => {
 
     res.status(200).json({ success: true, data: application });
   } catch (error) {
-    console.error("Get Application Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -342,7 +342,7 @@ router.get("/api/admin/users", async (req, res) => {
 
     res.status(200).json({ success: true, users, total, page: parseInt(page), limit: parseInt(limit) });
   } catch (error) {
-    console.error("Admin Users Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 });

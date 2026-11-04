@@ -7,7 +7,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const apiKey = process.env.GEMINI_API_KEY?.trim();
 if (!apiKey) {
-  console.warn("GEMINI_API_KEY not set. Communication test AI features will fail.");
+  // output removed
 }
 
 // Initialize the Google Generative AI client
@@ -77,7 +77,7 @@ async function generateWithFallback(prompt, retryCount = 0) {
       const text = response.text();
       
       if (text && text.trim()) {
-        console.log(`✓ Successfully used model: ${modelName}`);
+        // output removed
         return { text: text.trim(), modelUsed: modelName };
       }
     } catch (err) {
@@ -88,12 +88,12 @@ async function generateWithFallback(prompt, retryCount = 0) {
       const is429 = msg.includes("429") || msg.includes("too many requests") || msg.includes("quota exceeded");
 
       if (is404 || is503) {
-        console.warn(`⚠ Model ${modelName} failed (${is404 ? "404" : "503"}), trying fallback...`);
+        // output removed
         continue;
       }
       if (is429) {
         lastWas429 = true;
-        console.warn(`⚠ Model ${modelName} quota exceeded (429), trying next model...`);
+        // output removed
         continue;
       }
       // For other errors, throw immediately
@@ -104,7 +104,7 @@ async function generateWithFallback(prompt, retryCount = 0) {
   // All models failed; if 429, retry once after delay
   if (lastWas429 && retryCount < 1) {
     const delay = Math.min(parseRetryDelay(lastError), 90);
-    console.warn(`⚠ All models hit quota. Retrying in ${delay}s...`);
+    // output removed
     await sleep(delay);
     return generateWithFallback(prompt, retryCount + 1);
   }
@@ -229,8 +229,7 @@ Return ONLY the single JSON object, no markdown, no extra text, no arrays.`;
   try {
     parsed = JSON.parse(jsonStr);
   } catch (parseError) {
-    console.error("JSON Parse Error. Raw response:", text);
-    console.error("Extracted JSON string:", jsonStr);
+    // output removed
     throw new Error(`Failed to parse AI response as JSON: ${parseError.message}`);
   }
 

@@ -94,8 +94,7 @@ router.get("/api/applications/recruiter/:uid", async (req, res) => {
       success: true,
       applications: applicationsWithCandidates,
     });
-  } catch (error) {
-    console.error("GET Recruiter Applications Error:", error);
+} catch (error) {
     res.status(500).json({
       success: false,
       message: "Server error while fetching applications",
@@ -103,6 +102,7 @@ router.get("/api/applications/recruiter/:uid", async (req, res) => {
   }
 });
 
+//
 // PUT: Update Application Status
 // =======================================
 router.put("/api/applications/:id/status", async (req, res) => {
@@ -177,7 +177,6 @@ router.put("/api/applications/:id/status", async (req, res) => {
       data: updatedApplication,
     });
   } catch (error) {
-    console.error("Update Application Status Error:", error);
     res.status(500).json({
       success: false,
       message: "Server error while updating application status",

@@ -39,7 +39,7 @@ router.get("/api/notifications/:uid", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("GET Notifications Error:", error);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: "Server error while fetching notifications",
@@ -82,7 +82,7 @@ router.patch("/api/notifications/:id/read", async (req, res) => {
       message: "Notification marked as read",
     });
   } catch (error) {
-    console.error("Mark Notification as Read Error:", error);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: "Server error while marking notification as read",
@@ -118,7 +118,7 @@ router.patch("/api/notifications/read-all/:uid", async (req, res) => {
       modifiedCount: result.modifiedCount,
     });
   } catch (error) {
-    console.error("Mark All Notifications as Read Error:", error);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: "Server error while marking all notifications as read",
@@ -158,7 +158,7 @@ router.delete("/api/notifications/:id", async (req, res) => {
       message: "Notification deleted successfully",
     });
   } catch (error) {
-    console.error("Delete Notification Error:", error);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: "Server error while deleting notification",

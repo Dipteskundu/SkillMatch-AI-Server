@@ -50,7 +50,7 @@ async function generateWithFallback(prompt, retryCount = 0) {
       const text = response.text();
       
       if (text && text.trim()) {
-        console.log(`✓ Successfully used model: ${modelName} for questions`);
+        // output removed
         return { text: text.trim(), modelUsed: modelName };
       }
     } catch (err) {
@@ -157,7 +157,7 @@ Return ONLY the JSON array, no markdown, no extra text.`;
       };
     });
   } catch (error) {
-    console.error("Failed to parse Skill Questions JSON", error);
+    // output removed
     throw new Error("Failed to parse questions from AI");
   }
 }

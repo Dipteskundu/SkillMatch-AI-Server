@@ -230,7 +230,7 @@ export async function askChatbot(uid, role, question) {
       userContext = { userRole: role };
     }
   } catch (err) {
-    console.error("Context build error (using fallback):", err.message);
+    // output removed
     userContext = { userRole: role };
   }
 
@@ -288,15 +288,13 @@ Respond naturally and helpfully. When suggesting a page, say "visit [page name]"
         genAI = null;
         if (!warnedGeminiDisabled) {
           warnedGeminiDisabled = true;
-          console.warn(
-            "Gemini is disabled: invalid GEMINI_API_KEY. Set a valid GEMINI_API_KEY in environment variables to enable AI responses.",
-          );
+          // output removed
         }
       } else {
         // Avoid spamming logs on transient Gemini errors.
         if (!warnedGeminiDisabled && !process.env.VERCEL) {
           warnedGeminiDisabled = true;
-          console.warn("Gemini error — using fallback:", msg);
+          // output removed
         }
       }
       answer = buildFallback(intent, userContext, role, name);

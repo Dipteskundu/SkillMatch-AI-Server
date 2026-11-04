@@ -117,7 +117,6 @@ router.post("/login", authLimiter, async (req, res) => {
       user: publicUser(user),
     });
   } catch (error) {
-    console.error("LOGIN ERROR:", error);
     res.status(500).json({ success: false, message: "Server error during login" });
   }
 });
@@ -169,7 +168,6 @@ router.post("/register", authLimiter, async (req, res) => {
       user: publicUser(newUser),
     });
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
     res.status(500).json({ success: false, message: "Server error during registration" });
   }
 });
@@ -201,8 +199,7 @@ router.post("/refresh", async (req, res) => {
 
     res.status(200).json({ success: true, ...session });
   } catch (error) {
-    console.error("REFRESH ERROR:", error);
-    res.status(500).json({ success: false, message: "Server error during refresh" });
+    // handled silently
   }
 });
 
@@ -215,6 +212,108 @@ router.post("/logout", async (req, res) => {
   res.status(200).json({ success: true, message: "Logged out" });
 });
 
+// POST /api/auth/google — verify Firebase ID token and issue a JWT session.
+// New Google users always get the "candidate" role; existing accounts keep their role.
+router.post("/google", authLimiter, async (req, res) => {
+  try {
+    const idToken = String(req.body?.idToken || "");
+    if (!idToken) {
+      return res.status(400).json({ success: false, message: "idToken is required" });
+    }
+
+    const apiKey = process.env.FIREBASE_API_KEY;
+    const clientId = process.env.FIREBASE_WEB_CLIENT_ID;
+    if (!apiKey || !clientId) {
+      return res.status(503).json({ success: false, message: "Google sign-in is not configured on the server" });
+    }
+
+    // Verify the ID token using Google's v3 tokeninfo endpoint with the project's API key.
+    const tokenInfoUrl = `https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${encodeURIComponent(idToken)}&key=${apiKey}`;
+    const tokenRes = await fetch(tokenInfoUrl);
+    let tokenInfo;
+    try {
+      tokenInfo = await tokenRes.json();
+    } catch {
+      return res.status(401).json({ success: false, message: "Google token verification failed" });
+    }
+    if (!tokenRes.ok || tokenInfo.error) {
+      return res.status(401).json({ success: false, message: "Google token verification failed" });
+    }
+    // Aud check: the token must have been issued for this web app's client ID.
+    if (tokenInfo.aud !== clientId) {
+      return res.status(401).json({ success: false, message: "Token was not issued to this app" });
+    }
+    // Only allow sign‑in when the Google account email is verified.
+    if (String(tokenInfo.email_verified) !== "true") {
+      return res.status(403).json({ success: false, message: "Google account email is not verified" });
+    }
+    const email = String(tokenInfo.email || "").trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Google account has no email" });
+    }
+    const sub = String(tokenInfo.sub || ""); // Firebase uid (googleUid)
+
+    const users = getDB().collection("users");
+    const now = new Date();
+    let user = await users.findOne({ email });
+
+    if (user) {
+      // --- Link Google to existing account, keep the existing role ---
+      await users.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            googleUid: sub,
+            displayName: tokenInfo.name || user.displayName,
+            photoURL: tokenInfo.picture || user.photoURL,
+            emailVerified: true,
+            lastLoginAt: now,
+          },
+        }
+      );
+      user = { ...user, googleUid: sub, lastLoginAt: now };
+      // Backfill legacy firebaseUid if missing (same pattern as /login)
+      if (!user.firebaseUid) {
+        const uid = crypto.randomUUID();
+        await users.updateOne({ _id: user._id }, { $set: { firebaseUid: uid } });
+        user.firebaseUid = uid;
+      }
+    } else {
+      // --- Create a new account (always candidate) ---
+      const newUser = {
+        email,
+        role: "candidate",
+        displayName: tokenInfo.name || "",
+        photoURL: tokenInfo.picture || "",
+        googleUid: sub,
+        emailVerified: true,
+        firebaseUid: crypto.randomUUID(),
+        isSkillVerified: false,
+        verifiedSkills: [],
+        createdAt: now,
+        lastLoginAt: now,
+        // No `password` field — Google‑only accounts cannot log in via email/password.
+      };
+      const result = await users.insertOne(newUser);
+      user = { ...newUser, _id: result.insertedId };
+
+      // Concurrency guard: if insertOne threw a duplicate‑key error, fall back to findOne.
+    }
+
+    const session = await issueSession(user);
+    const responseUser = publicUser(user);
+    responseUser.googleUid = user.googleUid;
+    res.status(user._id === result?.insertedId ? 201 : 200).json({
+      success: true,
+      message: user._id === result?.insertedId ? "Signed in with Google" : "Signed in with Google",
+      ...session,
+      user: responseUser,
+    });
+  } catch (err) {
+    // Google auth error handled silently
+  }
+});
+
 // GET /api/auth/me
 router.get("/me", authenticateToken, async (req, res) => {
   try {
@@ -225,7 +324,6 @@ router.get("/me", authenticateToken, async (req, res) => {
     }
     res.status(200).json({ success: true, data: publicUser(user) });
   } catch (error) {
-    console.error("GET ME ERROR:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -241,7 +339,6 @@ router.get("/profile/:uid", authenticateToken, async (req, res) => {
     }
     res.status(200).json({ success: true, data: publicUser(user) });
   } catch (error) {
-    console.error("GET PROFILE ERROR:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -275,7 +372,6 @@ router.put("/profile/:uid", authenticateToken, async (req, res) => {
 
     res.status(200).json({ success: true, message: "Profile updated successfully" });
   } catch (error) {
-    console.error("UPDATE PROFILE ERROR:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });

@@ -24,9 +24,7 @@ router.get("/api/jobs", async (req, res) => {
       count: jobs.length,
       data: jobs,
     });
-  } catch (error) {
-    console.error("GET Jobs Error:", error);
-
+} catch (error) {
     res.status(500).json({
       success: false,
       message: "Server error while fetching jobs",
@@ -34,6 +32,7 @@ router.get("/api/jobs", async (req, res) => {
   }
 });
 
+//
 // POST: Create New Job
 // =======================================
 router.post("/api/jobs", async (req, res) => {
@@ -41,33 +40,6 @@ router.post("/api/jobs", async (req, res) => {
     const db = getDB();
 
     // 1️⃣ Extract fields from body
-    const {
-      title,
-      company,
-      location,
-      salary,
-      skills,
-      salaryRange,
-      experienceLevel,
-      employmentType,
-      posted,
-      postedBy,
-      description,
-      responsibilities,
-      vacancies,
-      deadline,
-    } = req.body;
-
-    // Debug logging
-    console.log("Received job data:", {
-      title,
-      company,
-      location,
-      postedBy,
-      body: req.body,
-    });
-
-    // 2️⃣ Basic validation
     if (!title || !company || !location) {
       return res.status(400).json({
         success: false,
@@ -95,12 +67,8 @@ router.post("/api/jobs", async (req, res) => {
       createdAt: new Date(),
     };
 
-    console.log("Creating job with data:", newJob);
-
     // 4️⃣ Insert into database
     const result = await db.collection("find_jobs").insertOne(newJob);
-
-    console.log("Job created with ID:", result.insertedId);
 
     // 5️⃣ Send response
     res.status(201).json({
@@ -150,18 +118,11 @@ router.post("/api/jobs", async (req, res) => {
           }
         }
       } catch (err) {
-        console.error("Job match notification error:", err);
+        // Notification error handled silently
       }
     });
   } catch (error) {
-    console.error("POST Job Error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Server error while creating job",
-    });
-  }
-});
+    // POST Job Error handled via response
 
 // GET: Get Single Job By ID
 // =======================================
@@ -195,9 +156,7 @@ router.get("/api/jobs/:id", async (req, res) => {
       success: true,
       data: job,
     });
-  } catch (error) {
-    console.error("GET Single Job Error:", error);
-
+} catch (error) {
     res.status(500).json({
       success: false,
       message: "Server error while fetching job",
@@ -205,6 +164,7 @@ router.get("/api/jobs/:id", async (req, res) => {
   }
 });
 
+//
 // DELETE: Delete Job By ID
 // =======================================
 router.delete("/api/jobs/:id", async (req, res) => {
@@ -242,9 +202,7 @@ router.delete("/api/jobs/:id", async (req, res) => {
       success: true,
       message: "Deletion request sent to admin",
     });
-  } catch (error) {
-    console.error("DELETE Job Error:", error);
-
+} catch (error) {
     res.status(500).json({
       success: false,
       message: "Server error while deleting job",
@@ -252,6 +210,7 @@ router.delete("/api/jobs/:id", async (req, res) => {
   }
 });
 
+//
 // POST: Apply to a Job
 // =======================================
 router.post("/api/jobs/:id/apply", async (req, res) => {
@@ -319,7 +278,8 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
 
       await db.collection("skillGaps").insertOne(skillGapDoc);
     } catch (gapError) {
-      console.error("Skill Gap Analysis Error:", gapError);
+        // Skill gap analysis error handled silently
+      }
     }
     // --- Skill Gap Detection End ---
 
@@ -364,19 +324,12 @@ router.post("/api/jobs/:id/apply", async (req, res) => {
             await db.collection("notifications").insertOne(notifObj);
           }
         }
-      } catch (err) {
-        console.error("Application notification error:", err);
+} catch (err) {
+        // Application notification error handled silently
       }
     });
   } catch (error) {
-    console.error("APPLY Job Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while submitting application",
-    });
-  }
-});
-
+    // APPLY Job Error handled via response
 // POST: Save Job
 // =======================================
 router.post("/api/jobs/:id/save", async (req, res) => {
@@ -422,7 +375,7 @@ router.post("/api/jobs/:id/save", async (req, res) => {
       message: "Job saved successfully",
     });
   } catch (error) {
-    console.error("SAVE Job Error:", error);
+} catch (error) {
     res.status(500).json({
       success: false,
       message: "Server error while saving job",
@@ -430,6 +383,7 @@ router.post("/api/jobs/:id/save", async (req, res) => {
   }
 });
 
+//
 // GET: Get Saved Jobs for User
 // =======================================
 router.get("/api/jobs/saved/:uid", async (req, res) => {
@@ -471,8 +425,7 @@ router.get("/api/jobs/saved/:uid", async (req, res) => {
         ...sj.jobDetails,
       })),
     });
-  } catch (error) {
-    console.error("GET Saved Jobs Error:", error);
+} catch (error) {
     res.status(500).json({
       success: false,
       message: "Server error while fetching saved jobs",
@@ -480,6 +433,7 @@ router.get("/api/jobs/saved/:uid", async (req, res) => {
   }
 });
 
+//
 // DELETE: Unsave Job
 // =======================================
 router.delete("/api/jobs/saved/:id", async (req, res) => {
@@ -505,12 +459,11 @@ router.delete("/api/jobs/saved/:id", async (req, res) => {
       });
     }
 
-    res.status(200).json({
+res.status(200).json({
       success: true,
       message: "Job unsaved successfully",
     });
   } catch (error) {
-    console.error("DELETE Unsave Job Error:", error);
     res.status(500).json({
       success: false,
       message: "Server error while unsaving job",
@@ -518,6 +471,7 @@ router.delete("/api/jobs/saved/:id", async (req, res) => {
   }
 });
 
+//
 // GET: Get Recruiter's Jobs
 // =======================================
 router.get("/api/jobs/my-jobs/:uid", async (req, res) => {
@@ -571,12 +525,11 @@ router.get("/api/jobs/my-jobs/:uid", async (req, res) => {
       }),
     );
 
-    res.status(200).json({
+res.status(200).json({
       success: true,
       jobs: jobsWithCounts,
     });
   } catch (error) {
-    console.error("GET Recruiter Jobs Error:", error);
     res.status(500).json({
       success: false,
       message: "Server error while fetching recruiter jobs",
@@ -584,6 +537,7 @@ router.get("/api/jobs/my-jobs/:uid", async (req, res) => {
   }
 });
 
+//
 // === ADMIN ROUTES ===
 
 // GET: Current Pending Approval Jobs
@@ -591,47 +545,46 @@ router.get("/api/admin/jobs/pending", async (req, res) => {
   try {
     const db = getDB();
     const jobs = await db
-      .collection("find_jobs")
-      .find({ status: "pending" })
+.res.find({ status: "pending" })
       .toArray();
     res.status(200).json({ success: true, count: jobs.length, data: jobs });
   } catch (error) {
-    console.error("GET Admin Pending Jobs Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
+//
 // GET: Current Approved Jobs
 router.get("/api/admin/jobs/approved", async (req, res) => {
   try {
     const db = getDB();
     const jobs = await db
-      .collection("find_jobs")
+.collection("find_jobs")
       .find({ status: "approved" })
       .sort({ createdAt: -1 })
       .toArray();
     res.status(200).json({ success: true, count: jobs.length, data: jobs });
   } catch (error) {
-    console.error("GET Admin Approved Jobs Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
+//
 // GET: Current Delete Requests
 router.get("/api/admin/jobs/delete-requests", async (req, res) => {
   try {
     const db = getDB();
     const jobs = await db
-      .collection("find_jobs")
+.collection("find_jobs")
       .find({ status: "delete_requested" })
       .toArray();
     res.status(200).json({ success: true, count: jobs.length, data: jobs });
   } catch (error) {
-    console.error("GET Admin Delete Requests Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
+//
 // PUT: Approve Job Post
 router.put("/api/admin/jobs/:id/approve", async (req, res) => {
   try {
@@ -651,7 +604,6 @@ router.put("/api/admin/jobs/:id/approve", async (req, res) => {
 
     res.status(200).json({ success: true, message: "Job approved successfully" });
   } catch (error) {
-    console.error("Approve Job Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -675,7 +627,6 @@ router.put("/api/admin/jobs/:id/reject", async (req, res) => {
 
     res.status(200).json({ success: true, message: "Job rejected" });
   } catch (error) {
-    console.error("Reject Job Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -696,7 +647,6 @@ router.delete("/api/admin/jobs/:id", async (req, res) => {
 
     res.status(200).json({ success: true, message: "Job permanently deleted" });
   } catch (error) {
-    console.error("Final Delete Job Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });

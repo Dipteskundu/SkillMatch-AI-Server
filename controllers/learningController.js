@@ -70,7 +70,7 @@ export async function listPaths(req, res) {
 
     res.status(200).json({ success: true, data: paths, count: paths.length });
   } catch (error) {
-    console.error("GET /learning/paths failed:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Failed to load learning paths" });
   }
 }
@@ -166,7 +166,7 @@ export async function getPathById(req, res) {
       data: { ...path, modules: modulesWithLessons },
     });
   } catch (error) {
-    console.error("GET /learning/paths/:id failed:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Failed to load learning path" });
   }
 }
@@ -264,7 +264,7 @@ export async function updateProgress(req, res) {
       data: { progressPercent: percent },
     });
   } catch (error) {
-    console.error("PATCH /learning/progress failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to update progress" });
   }
 }
@@ -351,7 +351,7 @@ async function findPlanLesson(db, uid, lessonId) {
         },
       );
     } catch (err) {
-      console.error("Plan lesson prose generation failed:", err?.message || err);
+      // error handled silently
       // Metadata-only lesson still renders; prose retries on next open.
     }
   }
@@ -434,7 +434,7 @@ export async function getLessonById(req, res) {
       data: fullContent,
     });
   } catch (error) {
-    console.error("GET /learning/lessons/:id failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to load lesson" });
   }
 }
@@ -549,7 +549,7 @@ Rules:
       data: { answer: text, lessonId: lesson._id, lessonTitle: lesson.title },
     });
   } catch (error) {
-    console.error("POST /learning/lessons/:id/ask failed:", error);
+    // error handled silently
     const message = error.message || "Plan generation failed. Please try again.";
     return res.status(502).json({ success: false, message });
   }
@@ -580,7 +580,7 @@ export async function createPath(req, res) {
       data: { ...path.ops[0], id: path.ops[0]._id },
     });
   } catch (error) {
-    console.error("CREATE path failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to create path" });
   }
 }
@@ -604,7 +604,7 @@ export async function updatePath(req, res) {
       data: { matchedCount: result.matchedCount, modifiedCount: result.modifiedCount },
     });
   } catch (error) {
-    console.error("UPDATE path failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to update path" });
   }
 }
@@ -622,7 +622,7 @@ export async function deletePath(req, res) {
       data: { deletedCount: result.deletedCount },
     });
   } catch (error) {
-    console.error("DELETE path failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to delete path" });
   }
 }
@@ -637,7 +637,7 @@ export async function listModules(req, res) {
       data: modules,
     });
   } catch (error) {
-    console.error("LIST modules failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to list modules" });
   }
 }
@@ -661,7 +661,7 @@ export async function createModule(req, res) {
       data: { ...module.ops[0], id: module.ops[0]._id },
     });
   } catch (error) {
-    console.error("CREATE module failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to create module" });
   }
 }
@@ -686,7 +686,7 @@ export async function updateModule(req, res) {
       data: { matchedCount: result.matchedCount, modifiedCount: result.modifiedCount },
     });
   } catch (error) {
-    console.error("UPDATE module failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to update module" });
   }
 }
@@ -704,7 +704,7 @@ export async function deleteModule(req, res) {
       data: { deletedCount: result.deletedCount },
     });
   } catch (error) {
-    console.error("DELETE module failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to delete module" });
   }
 }
@@ -719,7 +719,7 @@ export async function listLessons(req, res) {
       data: lessons,
     });
   } catch (error) {
-    console.error("LIST lessons failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to list lessons" });
   }
 }
@@ -746,7 +746,7 @@ export async function createLesson(req, res) {
       data: { ...lesson.ops[0], id: lesson.ops[0]._id },
     });
   } catch (error) {
-    console.error("CREATE lesson failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to create lesson" });
   }
 }
@@ -771,7 +771,7 @@ export async function updateLesson(req, res) {
       data: { matchedCount: result.matchedCount, modifiedCount: result.modifiedCount },
     });
   } catch (error) {
-    console.error("UPDATE lesson failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to update lesson" });
   }
 }
@@ -789,7 +789,7 @@ export async function deleteLesson(req, res) {
       data: { deletedCount: result.deletedCount },
     });
   } catch (error) {
-    console.error("DELETE lesson failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to delete lesson" });
   }
 }

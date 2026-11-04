@@ -62,7 +62,7 @@ const getSkillGapAnalysis = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Skill Gap Analysis Error:", error);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: "Server error while analyzing skill gap",

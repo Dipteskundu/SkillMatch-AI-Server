@@ -9,10 +9,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const apiKey = process.env.GEMINI_API_KEY?.trim();
 
 if (!apiKey) {
-    console.error("❌ GEMINI_API_KEY NOT FOUND in .env");
-    console.log("\nPlease add your API key to the .env file:");
-    console.log("GEMINI_API_KEY=your_api_key_here");
-    console.log("\nGet your API key from: https://ai.google.dev/");
+    // test output removed
+    // test output removed
+    // test output removed
     process.exit(1);
 }
 
@@ -20,9 +19,9 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey);
 
 async function runTest() {
-    console.log("🚀 Testing Gemini API connection...");
-    console.log("📚 Using official @google/generative-ai SDK");
-    console.log(`🔑 API Key: ${apiKey.slice(0, 5)}...${apiKey.slice(-5)}\n`);
+    // test output removed
+    // test output removed
+    // test output removed
 
     const testPrompt = "Say 'Gemini API is working perfectly!' if you can hear me.";
     
@@ -44,64 +43,61 @@ async function runTest() {
 
     for (const modelName of modelsToTry) {
         try {
-            console.log(`\n📡 Trying model: ${modelName}...`);
+            // test output removed
             
             const model = genAI.getGenerativeModel({ model: modelName });
             const result = await model.generateContent(testPrompt);
             const response = result.response;
             const text = response.text();
 
-            console.log("✅ SUCCESS!");
-            console.log(`📝 Response: ${text}`);
-            console.log(`🎯 Model used: ${modelName}`);
+            // test output removed
+            // test output removed
+            // test output removed
+            // test output removed
             
             successCount++;
             
             // If we got one successful response, that's enough for the test
             if (successCount === 1) {
-                console.log("\n" + "=".repeat(60));
-                console.log("✨ Gemini API is working perfectly!");
-                console.log("=".repeat(60));
+                // test output removed
+                // test output removed
+                // test output removed
                 return;
             }
         } catch (error) {
             const errorMsg = error.message || String(error);
             
-            // Log full error for debugging
-            console.log(`❌ Full error:`, error);
+            // test output removed
             
             if (errorMsg.includes("429") || errorMsg.includes("quota exceeded")) {
-                console.log(`⚠️  Quota exceeded for ${modelName}`);
-                quotaExceeded = true;
+                // test output removed
+                // test output removed
                 // Continue trying other models
             } else if (errorMsg.includes("404") || errorMsg.includes("not found")) {
-                console.log(`⚠️  Model not available: ${modelName}`);
+                // test output removed
             } else if (errorMsg.includes("503") || errorMsg.includes("unavailable")) {
-                console.log(`⚠️  Service temporarily unavailable for ${modelName}`);
+                // test output removed
             } else {
-                console.log(`❌ Error: ${errorMsg.substring(0, 100)}...`);
+                // test output removed
             }
         }
     }
     
-    console.log("\n" + "=".repeat(60));
+    // test output removed
     if (successCount > 0) {
-        console.log("✨ Gemini API connection successful!");
+        // test output removed
     } else if (quotaExceeded) {
-        console.log("⚠️  API Key quota exceeded");
-        console.log("\nThis usually means:");
-        console.log("• Free tier daily limit reached");
-        console.log("• Wait 24 hours or upgrade your plan");
-        console.log("• Check usage: https://ai.google.dev/");
-        console.log("• Rate limits: https://ai.google.dev/gemini-api/docs/rate-limits");
+        // test output removed
+        // test output removed
+        // test output removed
+        // test output removed
+        // test output removed
     } else {
-        console.log("❌ All models failed");
-        console.log("\nTroubleshooting:");
-        console.log("• Verify your API key is correct");
-        console.log("• Check your internet connection");
-        console.log("• Visit: https://ai.google.dev/");
+        // test output removed
+        // test output removed
+        // test output removed
     }
-    console.log("=".repeat(60));
+    // test output removed
 }
 
 runTest();

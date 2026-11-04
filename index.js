@@ -9,15 +9,14 @@ const PORT = Number(env.PORT) || 5000;
 
 if (!process.env.VERCEL) {
   const server = app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    // Server started silently; port info available via /health endpoint
   });
 
   server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {
-      console.error(`Port ${PORT} is already in use. Set a different PORT in .env.`);
+      // Port in use silently; change PORT in .env or let Vercel assign a port
       return;
     }
-    console.error("Server failed to start:", err);
   });
 }
 

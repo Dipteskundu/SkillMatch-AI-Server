@@ -84,7 +84,7 @@ router.get("/api/jobs/:id/fit", async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Fit Engine Error:", error);
+        // error handled silently
         res.status(500).json({ success: false, message: "Server error in fit engine" });
     }
 });
@@ -136,7 +136,7 @@ router.post("/api/applications/:id/viewed", async (req, res) => {
 
         res.status(200).json({ success: true, message: "Application marked as viewed" });
     } catch (error) {
-        console.error("Viewed Event Error:", error);
+        // error handled silently
         res.status(500).json({ success: false, message: "Server error" });
     }
 });
@@ -237,7 +237,7 @@ router.patch("/api/applications/:id/status", async (req, res) => {
 
         res.status(200).json({ success: true, message: `Status updated to "${status}"` });
     } catch (error) {
-        console.error("Status Update Error:", error);
+        // error handled silently
         res.status(500).json({ success: false, message: "Server error" });
     }
 });
@@ -284,7 +284,7 @@ router.get("/api/applications/:id/feedback", async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Feedback Fetch Error:", error);
+        // error handled silently
         res.status(500).json({ success: false, message: "Server error" });
     }
 });
@@ -313,7 +313,7 @@ router.get("/api/notifications/:uid", async (req, res) => {
             data: { notifications, unreadCount },
         });
     } catch (error) {
-        console.error("Notifications Fetch Error:", error);
+        // error handled silently
         res.status(500).json({ success: false, message: "Server error" });
     }
 });
@@ -340,7 +340,7 @@ router.patch("/api/notifications/:id/read", async (req, res) => {
 
         res.status(200).json({ success: true, message: "Notification marked as read" });
     } catch (error) {
-        console.error("Mark Read Error:", error);
+        // error handled silently
         res.status(500).json({ success: false, message: "Server error" });
     }
 });
@@ -363,7 +363,7 @@ router.patch("/api/notifications/read-all/:uid", async (req, res) => {
 
         res.status(200).json({ success: true, message: "All notifications marked as read" });
     } catch (error) {
-        console.error("Mark All Read Error:", error);
+        // error handled silently
         res.status(500).json({ success: false, message: "Server error" });
     }
 });

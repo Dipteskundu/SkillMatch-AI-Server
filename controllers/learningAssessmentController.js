@@ -78,7 +78,7 @@ export async function listAssessments(req, res) {
       })),
     });
   } catch (error) {
-    console.error("GET /learning/assessments failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to load assessments" });
   }
 }
@@ -184,7 +184,7 @@ export async function startAssessment(req, res) {
       },
     });
   } catch (error) {
-    console.error("POST /learning/assessments/:id/start failed:", error);
+    // error handled silently
     return fail(res, 500, "Failed to start the assessment");
   }
 }
@@ -312,7 +312,7 @@ export async function submitAttempt(req, res) {
       },
     });
   } catch (error) {
-    console.error("POST /learning/attempts/:id/submit failed:", error);
+    // error handled silently
     return fail(res, 500, "Failed to submit the attempt");
   }
 }
@@ -368,7 +368,7 @@ export async function getAttemptResults(req, res) {
 
     return fail(res, 400, "This attempt has not been submitted yet");
   } catch (error) {
-    console.error("GET /learning/attempts/:id/results failed:", error);
+    // error handled silently
     return fail(res, 500, "Failed to load the results");
   }
 }
@@ -445,7 +445,7 @@ export async function listAssessmentsSummary(req, res) {
       },
     });
   } catch (error) {
-    console.error("GET /learning/assessments/summary failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to load assessment summary" });
   }
 }
