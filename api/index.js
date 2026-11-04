@@ -1,4 +1,5 @@
 import "../config/dotenv.js";
+import { timingSafeEqual } from "node:crypto";
 import express from "express";
 import cors from "cors";
 
@@ -58,32 +59,48 @@ if (errors.length) {
 
 const hasFatalEnv = errors.length > 0;
 
-const corsOrigins = env.CORS_ORIGIN
-  ? env.CORS_ORIGIN.split(",")
-      .map((o) => o.trim())
-      .filter(Boolean)
-  : null;
-
-const localhostOrigin = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
-
 app.use(
+  "/api",
   cors({
-    origin(origin, callback) {
-      // Allow server-to-server or same-origin requests (no Origin header)
-      if (!origin) return callback(null, true);
-      // Local dev convenience: allow localhost / 127.0.0.1 on any port
-      if (!isProd && localhostOrigin.test(origin)) {
-        return callback(null, true);
-      }
-      // If no allowlist specified, allow all
-      if (!corsOrigins) return callback(null, true);
-      // Otherwise, enforce allowlist
-      if (corsOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: "*",
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
     credentials: false,
   }),
 );
+
+app.use("/api", (req, res, next) => {
+  if (req.method === "OPTIONS") return next();
+
+  if (!env.API_KEY) {
+    return res.status(503).json({
+      success: false,
+      message: "API access is not configured on this server.",
+    });
+  }
+
+  const providedKey = req.get("X-API-Key");
+  if (typeof providedKey !== "string") {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized: Missing API key",
+    });
+  }
+
+  const expected = Buffer.from(env.API_KEY);
+  const provided = Buffer.from(providedKey);
+  if (
+    expected.length !== provided.length ||
+    !timingSafeEqual(expected, provided)
+  ) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized: Invalid API key",
+    });
+  }
+
+  return next();
+});
 
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
