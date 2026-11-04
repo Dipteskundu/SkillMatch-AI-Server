@@ -3,7 +3,7 @@ import { createRequire } from "module";
 
 import { classifyIntent, INTENTS } from "./classifier.service.js";
 import { getCandidateContext, getRecruiterContext, getLearningContext, getUserName } from "./context.service.js";
-import { sanitizeResponse } from "./sanitizer.service.js";
+import { sanitizeResponse, stripPII, stripPIIFromText } from "./sanitizer.service.js";
 import { getLinkForIntent } from "../utils/linkMapper.js";
 import { normalizeInput } from "../utils/normalizeInput.js";
 
@@ -264,12 +264,12 @@ ${actionInstruction}
 USER ROLE: ${role}
 
 USER CONTEXT (read-only snapshot of this user's data):
-${JSON.stringify(userContext, null, 2)}
+${JSON.stringify(stripPII(userContext), null, 2)}
 
 PLATFORM KNOWLEDGE:
 ${JSON.stringify(docsContext, null, 2)}
 
-USER QUESTION: "${question}"
+USER QUESTION: ${stripPIIFromText(question)}
 
 Respond naturally and helpfully. When suggesting a page, say "visit [page name]" — the UI adds navigation links automatically.`;
 
