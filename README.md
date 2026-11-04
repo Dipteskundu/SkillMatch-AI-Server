@@ -126,7 +126,7 @@ Job listing and recruiter views are designed to be filterable; modules are separ
 ## 📡 API Documentation
 
 ### 🌐 Base URLs
-- Local: `http://localhost:5000`
+- Local: `http://localhost:5001`
 - Health: `GET /health`
 
 ### ✅ Response shape (typical)
@@ -264,7 +264,7 @@ FIREBASE_PROJECT_ID=
 FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY=
 FIREBASE_DATABASE_URL=
-PORT=5000
+PORT=5001
 ```
 
 ### 3) Start the server
@@ -272,7 +272,7 @@ PORT=5000
 npm start
 ```
 
-Server runs on: `http://localhost:5000`
+Server runs on: `http://localhost:5001`
 
 ---
 
@@ -323,11 +323,11 @@ SkillMatch-AI-Server/
 
 ### Option B) cURL quick tests
 ```bash
-curl http://localhost:5000/health
+curl http://localhost:5001/health
 ```
 
 ```bash
-curl -X POST http://localhost:5000/api/auth/sync-user \
+curl -X POST http://localhost:5001/api/auth/sync-user \
   -H "Content-Type: application/json" \
   -d "{\"uid\":\"test_uid\",\"email\":\"test@example.com\"}"
 ```
