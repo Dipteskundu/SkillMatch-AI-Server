@@ -1,0 +1,535 @@
+{
+  "slug": "javascript-fundamentals",
+  "title": "JavaScript Fundamentals and Advanced JavaScript",
+  "topic": "Programming Language",
+  "category": "Frontend",
+  "level": "beginner",
+  "difficulty": "Beginner",
+  "description": "Master the language that powers the web — from variables and functions to closures, asynchronous code, and the modern ES6+ features used in every professional codebase.",
+  "objectives": [
+    "Declare and transform data with confidence",
+    "Explain scope, closures, and the function lifecycle",
+    "Write correct asynchronous code with promises and async/await",
+    "Apply modern ES6+ syntax in real projects"
+  ],
+  "prerequisites": ["Basic HTML", "Comfort using a code editor"],
+  "estimatedDuration": "8 weeks",
+  "estimatedHours": 60,
+  "tags": ["javascript", "es6", "async", "functions", "closures"],
+  "order": 2,
+  "status": "published",
+  "modules": [
+    {
+      "slug": "language-fundamentals",
+      "title": "Language Fundamentals",
+      "description": "Values, types, variables, and control flow — the vocabulary of the language.",
+      "order": 1,
+      "estimatedHours": 14,
+      "prerequisites": [],
+      "completionCriteria": "Write a small script that reads input, transforms it through conditionals and loops, and formats the output.",
+      "lessons": [
+        {
+          "slug": "values-types-and-variables",
+          "title": "Values, Types, and Variables",
+          "order": 1,
+          "durationMinutes": 28,
+          "isPreview": true,
+          "objectives": ["List the primitive types", "Choose between const and let"],
+          "topics": ["types", "variables"],
+          "content": {
+            "introduction": "Every JavaScript program manipulates values. Knowing what type a value is — and how types convert — prevents entire categories of bugs.",
+            "explanation": "JavaScript has seven primitive types: string, number, bigint, boolean, undefined, null, and symbol, plus the object type for everything else. Variables declared with const cannot be reassigned and should be the default; let is for values that genuinely change. Avoid var entirely — it is function-scoped and hoists in surprising ways. Beware that typeof null returns \"object\", a quirk baked into the language, so check for null explicitly when you need to distinguish it.",
+            "examples": [
+              {
+                "title": "Declaring values",
+                "language": "javascript",
+                "code": "const TAX_RATE = 0.08;\nlet total = 25.0;\n\ntotal = total * (1 + TAX_RATE);\n\nconsole.log(typeof total);   // \"number\"\nconsole.log(typeof null);     // \"object\" — a known quirk\nconsole.log(total.toFixed(2)); // \"27.00\"",
+                "walkthrough": "TAX_RATE never changes so it is const; total is reassigned so it uses let. toFixed formats the number as a string."
+              }
+            ],
+            "useCase": "Pricing calculations, form validation, and formatting values for display.",
+            "knowledgeCheck": [
+              {
+                "question": "Which declaration should be your default for a value that never changes?",
+                "type": "mcq",
+                "options": ["const", "var", "let", "static"],
+                "correctIndex": 0,
+                "explanation": "const signals intent and prevents accidental reassignment."
+              },
+              {
+                "question": "What does typeof null return?",
+                "type": "mcq",
+                "options": ["\"object\"", "\"null\"", "\"undefined\"", "\"boolean\""],
+                "correctIndex": 0,
+                "explanation": "A historical bug in the language; use an explicit null check instead."
+              }
+            ],
+            "summary": "Prefer const, use let when reassigning, and remember types can surprise you — especially null."
+          }
+        },
+        {
+          "slug": "operators-and-type-coercion",
+          "title": "Operators and Type Coercion",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Predict the result of mixed-type operations", "Avoid loose equality pitfalls"],
+          "topics": ["operators", "coercion"],
+          "content": {
+            "introduction": "JavaScript converts between types automatically. Understanding when — and refusing to rely on it — makes your code predictable.",
+            "explanation": "The == operator converts operands before comparing, so \"1\" == 1 is true, while === compares without conversion and is almost always what you want. Addition is where coercion bites hardest: + concatenates strings, so 1 + \"1\" gives \"11\", but - * / coerce the string back to a number. Use Number(), String(), and Boolean() for explicit conversion rather than hoping the engine does what you intended. Truthiness also matters: 0, \"\", null, undefined, and NaN are all falsy.",
+            "examples": [
+              {
+                "title": "Loose vs strict equality",
+                "language": "javascript",
+                "code": "console.log(\"1\" == 1);   // true  — converts first\nconsole.log(\"1\" === 1);  // false — types differ\nconsole.log(1 + \"1\");    // \"11\"  — string concatenation\nconsole.log(\"6\" - 2);    // 4     — numeric subtraction\nconsole.log(Boolean(0));  // false",
+                "walkthrough": "Only === and !== avoid surprise conversions. The - operator coerces to number, but + does not when either side is a string."
+              }
+            ],
+            "useCase": "Comparing form input, URL query params, and API responses that arrive as strings.",
+            "knowledgeCheck": [
+              {
+                "question": "Which comparison operator avoids type coercion?",
+                "type": "mcq",
+                "options": ["===", "==", "=", "=>"],
+                "correctIndex": 0,
+                "explanation": "Strict equality compares both value and type."
+              },
+              {
+                "question": "What is the result of 1 + \"1\"?",
+                "type": "mcq",
+                "options": ["\"11\"", "2", "11", "NaN"],
+                "correctIndex": 0,
+                "explanation": "The + operator concatenates when either operand is a string."
+              }
+            ],
+            "summary": "Use === for comparisons and convert types explicitly instead of relying on coercion."
+          }
+        },
+        {
+          "slug": "control-flow-and-iteration",
+          "title": "Control Flow and Iteration",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Use modern iteration methods", "Replace manual loops with map/filter/reduce"],
+          "topics": ["loops", "arrays"],
+          "content": {
+            "introduction": "Loops decide what runs and when. Modern JavaScript gives you declarative alternatives that express intent directly.",
+            "explanation": "for...of iterates values, for...in iterates keys, and the classic for loop remains right when you need the index or custom stepping. For arrays, prefer map to transform, filter to select, find to locate a single match, and reduce to accumulate. These methods never mutate the original array (unless you deliberately reach for forEach plus assignment), and they read as a description of the data pipeline rather than bookkeeping. Reach for a plain loop only when the logic truly needs manual control of iteration.",
+            "examples": [
+              {
+                "title": "A data pipeline",
+                "language": "javascript",
+                "code": "const orders = [\n  { id: 1, total: 20, status: \"paid\" },\n  { id: 2, total: 15, status: \"void\" },\n  { id: 3, total: 42, status: \"paid\" },\n];\n\nconst paidTotal = orders\n  .filter((o) => o.status === \"paid\")\n  .map((o) => o.total)\n  .reduce((sum, t) => sum + t, 0);\n\nconsole.log(paidTotal); // 62",
+                "walkthrough": "filter keeps paid orders, map extracts totals, reduce sums them. The initial value 0 makes reduce safe on an empty array."
+              }
+            ],
+            "useCase": "Summing carts, selecting matching records, and transforming API data for display.",
+            "knowledgeCheck": [
+              {
+                "question": "Which method transforms every element into a new array?",
+                "type": "mcq",
+                "options": ["map", "filter", "reduce", "forEach"],
+                "correctIndex": 0,
+                "explanation": "map returns a new array of the same length with transformed values."
+              },
+              {
+                "question": "Why pass 0 as the initial value to reduce?",
+                "type": "mcq",
+                "options": ["It makes the reduction safe on empty arrays", "It converts to a string", "It sorts the array", "It enables async"],
+                "correctIndex": 0,
+                "explanation": "Without an initial value, reduce throws on an empty array."
+              }
+            ],
+            "summary": "Express iteration as a pipeline: filter to select, map to transform, reduce to accumulate."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "functions-scope-closures",
+      "title": "Functions, Scope, and Closures",
+      "description": "How functions capture their environment — the concept behind most advanced patterns.",
+      "order": 2,
+      "estimatedHours": 16,
+      "prerequisites": ["language-fundamentals"],
+      "completionCriteria": "Implement a counter and a memoized function using closures, explaining what each captures.",
+      "lessons": [
+        {
+          "slug": "functions-and-scope",
+          "title": "Functions and Scope",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Distinguish function scopes", "Explain hoisting behavior"],
+          "topics": ["scope", "functions"],
+          "content": {
+            "introduction": "Scope determines which variables a piece of code can see. In JavaScript, scope is created by functions and blocks, not by indentation.",
+            "explanation": "A variable declared inside a function or a pair of curly braces is local to it; anything outside is global, which you should avoid. let and const are block-scoped and exist in a temporal dead zone from the block start until their declaration — reading them earlier throws. var is function-scoped and hoisted as undefined, which is why older code produces surprising results. Each function call creates its own scope, so recursive calls and callbacks do not clobber each other's locals.",
+            "examples": [
+              {
+                "title": "Block scope vs function scope",
+                "language": "javascript",
+                "code": "function demo() {\n  var a = 1;\n  if (true) {\n    var b = 2;   // leaks to the whole function\n    let c = 3;   // stays inside this block\n    const d = 4; // stays inside this block\n  }\n  console.log(a); // 1\n  // console.log(c); // ReferenceError\n  return a;\n}",
+                "walkthrough": "var ignores the block; let and const stop at the closing brace. Declaring them inside the block keeps intent local."
+              }
+            ],
+            "useCase": "Keeping helper variables private inside a function instead of polluting global state.",
+            "knowledgeCheck": [
+              {
+                "question": "Which keyword is block-scoped?",
+                "type": "mcq",
+                "options": ["let", "var", "function", "none — all are function-scoped"],
+                "correctIndex": 0,
+                "explanation": "let and const are confined to the enclosing block; var is function-scoped."
+              },
+              {
+                "question": "What is the temporal dead zone?",
+                "type": "mcq",
+                "options": ["The region before a let/const declaration where access throws", "A delay in function calls", "The global scope", "Garbage collection"],
+                "correctIndex": 0,
+                "explanation": "The binding exists but cannot be read until execution reaches its declaration."
+              }
+            ],
+            "summary": "Prefer let and const for block scope; avoid var and avoid globals."
+          }
+        },
+        {
+          "slug": "closures",
+          "title": "Closures",
+          "order": 2,
+          "durationMinutes": 32,
+          "isPreview": false,
+          "objectives": ["Explain what a closure captures", "Build private state with closures"],
+          "topics": ["closures", "state"],
+          "content": {
+            "introduction": "A closure is a function together with the variables that were in scope when it was created. Those variables stay alive as long as the function does.",
+            "explanation": "When you return an inner function, it keeps a reference to its enclosing scope's bindings even after the outer function has finished. This is not a memory leak — it is the mechanism behind private state, factories, event handlers, and hooks. Because each call to the outer function creates a fresh scope, every returned function gets its own independent copy of the captured variables, which is exactly how a counter can hold its own tally.",
+            "examples": [
+              {
+                "title": "A private counter",
+                "language": "javascript",
+                "code": "function createCounter() {\n  let count = 0;          // private — unreachable from outside\n  return {\n    increment: () => ++count,\n    value: () => count,\n  };\n}\n\nconst a = createCounter();\nconst b = createCounter();\na.increment();\na.increment();\n\nconsole.log(a.value()); // 2\nconsole.log(b.value()); // 0 — separate scope",
+                "walkthrough": "count lives in createCounter's scope. The returned functions close over it, and each createCounter call gets its own."
+              }
+            ],
+            "useCase": "Private counters, configuration factories, and debounced event handlers.",
+            "knowledgeCheck": [
+              {
+                "question": "What does a closure capture?",
+                "type": "mcq",
+                "options": ["The variables in scope where the function was created", "Only the arguments passed at call time", "The global object only", "Nothing — closures do not exist in JS"],
+                "correctIndex": 0,
+                "explanation": "The function keeps a live reference to its lexical environment."
+              },
+              {
+                "question": "Why do the two counters above stay independent?",
+                "type": "mcq",
+                "options": ["Each createCounter call creates a new scope", "They share a global variable", "JavaScript clones objects automatically", "The increment method resets count"],
+                "correctIndex": 0,
+                "explanation": "Fresh bindings are created on every invocation of the factory."
+              }
+            ],
+            "summary": "Closures keep an enclosing scope alive — the foundation of private state and factories."
+          }
+        },
+        {
+          "slug": "arrow-functions-and-this",
+          "title": "Arrow Functions and this",
+          "order": 3,
+          "durationMinutes": 28,
+          "isPreview": false,
+          "objectives": ["Use arrow syntax appropriately", "Explain lexical this"],
+          "topics": ["arrow-functions", "this"],
+          "content": {
+            "introduction": "Arrow functions are shorter to write and differ from ordinary functions in one important way: they do not have their own `this`.",
+            "explanation": "An arrow function inherits `this` from the surrounding scope at definition time, which eliminates the classic problem of losing context inside callbacks. That makes them ideal for handlers and array methods, and wrong for object methods that need `this` to refer to the object, or for constructors, which arrows cannot be used with. They also lack their own arguments object and cannot be used with new.",
+            "examples": [
+              {
+                "title": "this preserved in a callback",
+                "language": "javascript",
+                "code": "const cart = {\n  items: [10, 20],\n  total() {\n    // arrow inherits this from total()\n    return this.items.reduce((sum, n) => sum + n, 0);\n  },\n};\n\nconsole.log(cart.total()); // 30",
+                "walkthrough": "The arrow keeps this bound to cart, so this.items resolves correctly inside reduce."
+              }
+            ],
+            "useCase": "Event handlers, timers, and array pipelines where you need the outer this.",
+            "knowledgeCheck": [
+              {
+                "question": "Where does an arrow function get its `this`?",
+                "type": "mcq",
+                "options": ["From the enclosing lexical scope", "From the object it is called on", "From the global object always", "It has its own this"],
+                "correctIndex": 0,
+                "explanation": "Arrows are lexically bound; they ignore call-site this."
+              },
+              {
+                "question": "Which use case is a poor fit for an arrow function?",
+                "type": "mcq",
+                "options": ["A constructor called with new", "An array map callback", "A promise then handler", "An event listener"],
+                "correctIndex": 0,
+                "explanation": "Arrows have no prototype and cannot be constructed."
+              }
+            ],
+            "summary": "Arrows inherit this lexically — perfect for callbacks, unsuitable as constructors."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "asynchronous-javascript",
+      "title": "Asynchronous JavaScript",
+      "description": "The event loop, promises, and async/await — writing code that waits without freezing.",
+      "order": 3,
+      "estimatedHours": 16,
+      "prerequisites": ["functions-scope-closures"],
+      "completionCriteria": "Write an async function that fetches data, handles failure, and runs independent requests in parallel.",
+      "lessons": [
+        {
+          "slug": "event-loop-and-callbacks",
+          "title": "The Event Loop and Callbacks",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Describe the call stack and task queue", "Predict execution order"],
+          "topics": ["event-loop", "callbacks"],
+          "content": {
+            "explanation": "JavaScript runs on a single thread with a call stack. When an operation such as a timer or network request completes, its callback is placed in a queue rather than run immediately. The event loop checks whether the stack is empty and, if so, pulls the next callback from the queue onto the stack. This is why blocking the stack with a long synchronous loop freezes the entire page — timers and clicks wait behind it. Microtasks (promise callbacks) are drained before macrotasks (timers), which is why a promise resolves before a setTimeout of 0.",
+            "introduction": "JavaScript does one thing at a time. Asynchronous work is handled by queueing callbacks and running them when the stack is free.",
+            "examples": [
+              {
+                "title": "Execution order",
+                "language": "javascript",
+                "code": "console.log(\"start\");\n\nsetTimeout(() => console.log(\"timeout\"), 0);\n\nPromise.resolve().then(() => console.log(\"promise\"));\n\nconsole.log(\"end\");\n\n// Order: start, end, promise, timeout",
+                "walkthrough": "Synchronous logs run first. The promise microtask is drained before the timer macrotask even with a 0ms delay."
+              }
+            ],
+            "useCase": "Reasoning about why UI updates appear out of order, and why a spinner can freeze.",
+            "knowledgeCheck": [
+              {
+                "question": "What happens if you block the call stack with a long loop?",
+                "type": "mcq",
+                "options": ["The page freezes — queued callbacks cannot run", "Timers run in parallel on another thread", "The loop is automatically cancelled", "Promises resolve immediately"],
+                "correctIndex": 0,
+                "explanation": "There is only one thread; nothing else can run until the stack clears."
+              },
+              {
+                "question": "Which runs first: a promise callback or setTimeout(..., 0)?",
+                "type": "mcq",
+                "options": ["The promise callback", "The setTimeout", "They run simultaneously", "It is random"],
+                "correctIndex": 0,
+                "explanation": "Microtasks are drained before the next macrotask."
+              }
+            ],
+            "summary": "One thread, a queue, and an event loop that runs callbacks when the stack is empty."
+          }
+        },
+        {
+          "slug": "promises",
+          "title": "Promises",
+          "order": 2,
+          "durationMinutes": 32,
+          "isPreview": false,
+          "objectives": ["Create and chain promises", "Handle rejection correctly"],
+          "topics": ["promises", "error-handling"],
+          "content": {
+            "introduction": "A promise represents a value that may arrive later — and guarantees a settled outcome exactly once.",
+            "explanation": "A promise starts pending and becomes either fulfilled with a value or rejected with a reason. then handles success, catch handles failure, and finally runs either way. Chaining works because then returns a new promise, letting you flatten nested operations into a linear sequence. Two rules prevent the classic bugs: always return from inside then so the value propagates, and attach a catch to every chain — an unhandled rejection fails silently in older environments. Use Promise.all to run operations in parallel and fail fast, or Promise.allSettled when you want every outcome.",
+            "examples": [
+              {
+                "title": "Chaining and parallel work",
+                "language": "javascript",
+                "code": "function getUser(id) {\n  return fetch(`/api/users/${id}`).then((r) => {\n    if (!r.ok) throw new Error(`HTTP ${r.status}`);\n    return r.json();\n  });\n}\n\nPromise.all([getUser(1), getUser(2)])\n  .then(([a, b]) => console.log(a, b))\n  .catch((err) => console.error(\"failed:\", err.message));",
+                "walkthrough": "The ok check converts HTTP errors into rejections. Promise.all starts both requests together and rejects if either fails."
+              }
+            ],
+            "useCase": "Fetching several resources at once and showing a single error state on failure.",
+            "knowledgeCheck": [
+              {
+                "question": "How many times can a promise settle?",
+                "type": "mcq",
+                "options": ["Exactly once", "Once per then", "Unlimited times", "Zero if unhandled"],
+                "correctIndex": 0,
+                "explanation": "Later attempts to resolve or reject are ignored."
+              },
+              {
+                "question": "What does Promise.all do when one input rejects?",
+                "type": "mcq",
+                "options": ["It rejects immediately", "It waits for all to finish", "It resolves with undefined", "It retries the failed one"],
+                "correctIndex": 0,
+                "explanation": "Use Promise.allSettled if you need every result regardless of failure."
+              }
+            ],
+            "summary": "Promises settle once, chain linearly, and support parallel execution with Promise.all."
+          }
+        },
+        {
+          "slug": "async-await",
+          "title": "async/await",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Write sequential and parallel async code", "Use try/catch for failures"],
+          "topics": ["async-await", "error-handling"],
+          "content": {
+            "introduction": "async/await is syntax over promises that lets asynchronous code read like ordinary synchronous code.",
+            "explanation": "An async function always returns a promise, and await pauses that function — not the whole thread — until the awaited promise settles. Sequential awaits express order clearly, but they are slow when operations are independent: awaiting them one by one runs them serially. For independent work, start them all first and await the combined promise. Errors surface as thrown exceptions, so wrap the flow in try/catch; note that a try/catch does not catch errors from a floating promise you never awaited.",
+            "examples": [
+              {
+                "title": "Sequential vs parallel",
+                "language": "javascript",
+                "code": "async function loadDashboard(userId) {\n  try {\n    // Serial — slower:\n    // const user = await fetchUser(userId);\n    // const posts = await fetchPosts(userId);\n\n    // Parallel:\n    const [user, posts] = await Promise.all([\n      fetchUser(userId),\n      fetchPosts(userId),\n    ]);\n\n    return { user, posts };\n  } catch (err) {\n    console.error(\"load failed\", err);\n    throw err;\n  }\n}",
+                "walkthrough": "Destructuring the Promise.all result keeps both values. try/catch handles any rejection from either request."
+              }
+            ],
+            "useCase": "Any page that needs several independent API calls before rendering.",
+            "knowledgeCheck": [
+              {
+                "question": "What does await actually pause?",
+                "type": "mcq",
+                "options": ["Only the enclosing async function", "The entire JavaScript thread", "The event loop", "Nothing — it is synchronous"],
+                "correctIndex": 0,
+                "explanation": "Other code, including timers, keeps running normally."
+              },
+              {
+                "question": "Why run independent requests with Promise.all?",
+                "type": "mcq",
+                "options": ["They execute concurrently instead of serially", "It retries failed requests", "It sorts the results", "It avoids using async functions"],
+                "correctIndex": 0,
+                "explanation": "Awaiting them one after another adds each duration together."
+              }
+            ],
+            "summary": "await pauses one function; start independent work together and catch errors with try/catch."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "advanced-javascript-patterns",
+      "title": "Advanced JavaScript Patterns",
+      "description": "Objects, prototypes, modules, and the tools that keep large codebases maintainable.",
+      "order": 4,
+      "estimatedHours": 14,
+      "prerequisites": ["asynchronous-javascript"],
+      "completionCriteria": "Explain prototypal inheritance and organize a script into explicit module exports.",
+      "lessons": [
+        {
+          "slug": "objects-and-prototypes",
+          "title": "Objects and Prototypes",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Trace property lookup along the prototype chain", "Use classes as prototype sugar"],
+          "topics": ["prototypes", "classes"],
+          "content": {
+            "introduction": "JavaScript objects inherit from other objects. Property lookup walks that chain until it finds a match or reaches the end.",
+            "explanation": "Every object has an internal [[Prototype]] link. When a property is missing on the object itself, JavaScript checks its prototype, then that prototype's prototype, and so on — the prototype chain. Methods like toString are found this way on Object.prototype. The class syntax is syntactic sugar over this mechanism: methods defined in a class body live on the prototype and are shared by every instance, while fields assigned in the constructor are per-instance. Understanding this explains why methods are not duplicated in memory and why instanceof works.",
+            "examples": [
+              {
+                "title": "Prototype lookup",
+                "language": "javascript",
+                "code": "class Animal {\n  constructor(name) { this.name = name; }\n  speak() { return `${this.name} makes a sound`; }\n}\n\nclass Dog extends Animal {\n  speak() { return `${this.name} barks`; }\n}\n\nconst d = new Dog(\"Rex\");\nconsole.log(d.speak());       // \"Rex barks\"\nconsole.log(d instanceof Dog);   // true\nconsole.log(d instanceof Animal); // true",
+                "walkthrough": "speak is found on Dog. The instance still links to Animal through the chain, so instanceof holds for both."
+              }
+            ],
+            "useCase": "Sharing behavior across many instances without duplicating methods.",
+            "knowledgeCheck": [
+              {
+                "question": "Where are class methods stored?",
+                "type": "mcq",
+                "options": ["On the prototype, shared by all instances", "In each instance's own properties", "In a global registry", "Inside the constructor every time"],
+                "correctIndex": 0,
+                "explanation": "This is why methods are not re-created for every object."
+              },
+              {
+                "question": "What does d instanceof Animal check?",
+                "type": "mcq",
+                "options": ["Whether Animal.prototype appears in the chain", "Whether d is a primitive", "Whether Animal was imported", "Whether the constructor ran"],
+                "correctIndex": 0,
+                "explanation": "It walks the prototype chain looking for Animal.prototype."
+              }
+            ],
+            "summary": "Property lookup walks the prototype chain; classes are sugar over prototypal inheritance."
+          }
+        },
+        {
+          "slug": "modules-and-imports",
+          "title": "Modules and Imports",
+          "order": 2,
+          "durationMinutes": 28,
+          "isPreview": false,
+          "objectives": ["Split code into modules", "Choose named vs default exports"],
+          "topics": ["modules", "esm"],
+          "content": {
+            "introduction": "Modules let you split a program into files with explicit imports and exports, instead of relying on global scripts.",
+            "explanation": "ES modules use export to expose values and import to consume them. Named exports suit several values from one file and make refactoring safer because the binding name matters; a default export suits a file whose primary purpose is one component or function. Imports are live bindings — if the exporting module changes the value, importers see it — and they are also hoisted, so a module's dependencies load before its own code runs. Modules execute once regardless of how many files import them, which makes them a natural place for shared singletons.",
+            "examples": [
+              {
+                "title": "Named and default exports",
+                "language": "javascript",
+                "code": "// math.js\nexport function add(a, b) { return a + b; }\nexport const PI = 3.14159;\n\n// app.js\nimport { add, PI } from \"./math.js\";\nimport formatCurrency from \"./format.js\"; // default\n\nconsole.log(add(2, 3));          // 5\nconsole.log(formatCurrency(9.5)); // \"$9.50\"",
+                "walkthrough": "Named exports are imported by exact name; the default export can be given any local name."
+              }
+            ],
+            "useCase": "Sharing utilities, API clients, and constants across files without globals.",
+            "knowledgeCheck": [
+              {
+                "question": "What is a benefit of named exports over a single global script?",
+                "type": "mcq",
+                "options": ["Dependencies are explicit and refactor-safe", "They run faster", "They need no bundler ever", "They avoid using functions"],
+                "correctIndex": 0,
+                "explanation": "You can see exactly what each file depends on by reading its imports."
+              },
+              {
+                "question": "How many default exports may one module have?",
+                "type": "mcq",
+                "options": ["One", "Two", "Unlimited", "One per function"],
+                "correctIndex": 0,
+                "explanation": "Use named exports when you need to expose several values."
+              }
+            ],
+            "summary": "Modules make dependencies explicit. Prefer named exports for shared utilities."
+          }
+        },
+        {
+          "slug": "iterators-generators-and-iterables",
+          "title": "Iterators, Generators, and Iterables",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Build a custom iterable", "Use generators for lazy sequences"],
+          "topics": ["iterators", "generators"],
+          "content": {
+            "introduction": "Anything that works with for...of follows a small protocol. Generators are the easiest way to implement it.",
+            "explanation": "An iterable exposes a method returning an iterator with next(), which yields { value, done }. Arrays, strings, and Maps are all iterables. A generator function marked with * and containing yield produces an iterator automatically, computing values lazily — only when asked. That makes generators ideal for infinite or very large sequences, pausing expensive work, and implementing custom iteration without hand-writing the protocol. Because state is preserved between yields, a generator can also model resumable workflows.",
+            "examples": [
+              {
+                "title": "A lazy range generator",
+                "language": "javascript",
+                "code": "function* range(start, end, step = 1) {\n  for (let i = start; i < end; i += step) {\n    yield i;\n  }\n}\n\nfor (const n of range(0, 1000000, 2)) {\n  if (n > 10) break;   // nothing beyond is computed\n  console.log(n);\n}\n\nconst [a, b] = range(0, 10); // 0, 1",
+                "walkthrough": "Values are produced on demand; break stops work immediately instead of building a million-element array."
+              }
+            ],
+            "useCase": "Paginating large datasets, reading streams, and representing game or workflow states.",
+            "knowledgeCheck": [
+              {
+                "question": "What makes a value iterable?",
+                "type": "mcq",
+                "options": ["It implements a method returning an iterator", "It is an array only", "It has a length property", "It is a string"],
+                "correctIndex": 0,
+                "explanation": "The Symbol.iterator method is the actual requirement."
+              },
+              {
+                "question": "What is the main benefit of generators?",
+                "type": "mcq",
+                "options": ["Lazy evaluation — values are computed on demand", "Faster arithmetic", "Automatic parallelism", "Type checking"],
+                "correctIndex": 0,
+                "explanation": "They pause at each yield, so nothing is computed until requested."
+              }
+            ],
+            "summary": "Generators implement the iterator protocol with lazy, resumable production of values."
+          }
+        }
+      ]
+    }
+  ]
+}

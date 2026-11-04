@@ -2,7 +2,6 @@
 import { ObjectId } from "mongodb";
 import crypto from "crypto";
 import { getDB } from "../config/db.js";
-import { getFirebaseService } from "../services/firebaseService.js";
 
 // Utility to generate a unique room name for Jitsi
 const generateJitsiRoom = (jobId, applicationId) => {
@@ -34,15 +33,6 @@ async function sendInterviewNotification({ db, userId, notification }) {
     await db.collection("notifications").insertOne(notification);
   } catch (err) {
     console.error("Failed to persist notification:", err);
-  }
-
-  const firebaseService = getFirebaseService();
-  if (!firebaseService) return;
-
-  try {
-    await firebaseService.sendNotification(userId, notification);
-  } catch (err) {
-    console.error("Failed to send Firebase notification:", err);
   }
 };
 
