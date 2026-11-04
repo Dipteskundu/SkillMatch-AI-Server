@@ -264,9 +264,11 @@ FIREBASE_PROJECT_ID=
 FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY=
 FIREBASE_DATABASE_URL=
-CORS_ORIGIN=http://localhost:3000
+API_KEY=
 PORT=5000
 ```
+
+Set the same `API_KEY` on the frontend as `NEXT_PUBLIC_API_KEY`. Browser API keys are visible to users; protected endpoints still require a valid user JWT and role.
 
 ### 3) Start the server
 ```bash
@@ -329,6 +331,7 @@ curl http://localhost:5000/health
 
 ```bash
 curl -X POST http://localhost:5000/api/auth/sync-user \
+  -H "X-API-Key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d "{\"uid\":\"test_uid\",\"email\":\"test@example.com\"}"
 ```
@@ -347,11 +350,8 @@ Steps:
 2. Add environment variables from `.env.example`.
 3. Deploy.
 
-### 🌍 CORS
-Set `CORS_ORIGIN` as a comma-separated list:
-```text
-https://your-frontend.vercel.app,http://localhost:3000
-```
+### 🌍 Cross-origin API access
+The API allows requests from any origin and accepts `X-API-Key`, `Authorization`, and `Content-Type` headers. Every `/api/*` request must include the shared API key; protected endpoints also require the existing user JWT and role. `/` and `/health` remain public.
 
 ---
 
@@ -362,10 +362,11 @@ https://your-frontend.vercel.app,http://localhost:3000
 | Status | When it happens | Example response |
 |---:|---|---|
 | 400 | Invalid payload / missing fields | `{ "success": false, "message": "..." }` |
-| 401 | Missing/invalid token (protected routes) | `{ "success": false, "message": "Unauthorized: Missing Token" }` |
+| 401 | Missing/invalid API key or user token | `{ "success": false, "message": "Unauthorized" }` |
 | 403 | Role/ownership restriction | `{ "success": false, "message": "Access denied" }` |
 | 404 | Route or resource not found | `{ "success": false, "message": "Route not found" }` |
 | 500 | Server misconfig or unexpected error | `{ "success": false, "message": "Internal server error" }` |
+| 503 | API key is not configured on the server | `{ "success": false, "message": "API access is not configured on this server." }` |
 
 ---
 
