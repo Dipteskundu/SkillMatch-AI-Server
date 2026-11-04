@@ -5,7 +5,7 @@ import app from "./api/index.js";
 import { loadEnv } from "./config/env.js";
 
 const { env } = loadEnv();
-const PORT = Number(env.PORT) || 5000;
+const PORT = Number(env.PORT) || 5001;
 
 if (!process.env.VERCEL) {
   const server = app.listen(PORT, () => {

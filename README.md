@@ -126,7 +126,7 @@ Job listing and recruiter views are designed to be filterable; modules are separ
 ## 📡 API Documentation
 
 ### 🌐 Base URLs
-- Local: `http://localhost:5000`
+- Local: `http://localhost:5001`
 - Health: `GET /health`
 
 ### ✅ Response shape (typical)
@@ -264,18 +264,15 @@ FIREBASE_PROJECT_ID=
 FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY=
 FIREBASE_DATABASE_URL=
-API_KEY=
-PORT=5000
+PORT=5001
 ```
-
-Set the same `API_KEY` on the frontend as `NEXT_PUBLIC_API_KEY`. Browser API keys are visible to users; protected endpoints still require a valid user JWT and role.
 
 ### 3) Start the server
 ```bash
 npm start
 ```
 
-Server runs on: `http://localhost:5000`
+Server runs on: `http://localhost:5001`
 
 ---
 
@@ -326,12 +323,11 @@ SkillMatch-AI-Server/
 
 ### Option B) cURL quick tests
 ```bash
-curl http://localhost:5000/health
+curl http://localhost:5001/health
 ```
 
 ```bash
-curl -X POST http://localhost:5000/api/auth/sync-user \
-  -H "X-API-Key: $API_KEY" \
+curl -X POST http://localhost:5001/api/auth/sync-user \
   -H "Content-Type: application/json" \
   -d "{\"uid\":\"test_uid\",\"email\":\"test@example.com\"}"
 ```
@@ -351,7 +347,7 @@ Steps:
 3. Deploy.
 
 ### 🌍 Cross-origin API access
-The API allows requests from any origin and accepts `X-API-Key`, `Authorization`, and `Content-Type` headers. Every `/api/*` request must include the shared API key; protected endpoints also require the existing user JWT and role. `/` and `/health` remain public.
+The API allows browser requests from any origin and accepts `Authorization` and `Content-Type` headers. Public routes are available without an API key. Protected endpoints continue to require the existing user JWT, role, and ownership permissions. `/` and `/health` remain public.
 
 ---
 
@@ -362,11 +358,10 @@ The API allows requests from any origin and accepts `X-API-Key`, `Authorization`
 | Status | When it happens | Example response |
 |---:|---|---|
 | 400 | Invalid payload / missing fields | `{ "success": false, "message": "..." }` |
-| 401 | Missing/invalid API key or user token | `{ "success": false, "message": "Unauthorized" }` |
+| 401 | Missing/invalid user token | `{ "success": false, "message": "Unauthorized" }` |
 | 403 | Role/ownership restriction | `{ "success": false, "message": "Access denied" }` |
 | 404 | Route or resource not found | `{ "success": false, "message": "Route not found" }` |
 | 500 | Server misconfig or unexpected error | `{ "success": false, "message": "Internal server error" }` |
-| 503 | API key is not configured on the server | `{ "success": false, "message": "API access is not configured on this server." }` |
 
 ---
 
