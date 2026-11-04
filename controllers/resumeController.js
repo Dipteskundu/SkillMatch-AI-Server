@@ -46,8 +46,8 @@ async function uploadResume(req, res) {
     try {
       extractedData = await extractSkillsFromResume(extractedText);
     } catch (aiError) {
-      console.error("AI extraction failed, using fallback extraction:", aiError);
-      extractedData = extractFallbackFromText(extractedText);
+// error handled silently
+    extractedData = extractFallbackFromText(extractedText);
       warning = "AI extraction was unavailable, so basic keyword extraction was used.";
     }
 
@@ -112,7 +112,7 @@ async function uploadResume(req, res) {
     });
 
   } catch (error) {
-    console.error("Upload Resume Error:", error);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: error.message || "Server error during resume processing"

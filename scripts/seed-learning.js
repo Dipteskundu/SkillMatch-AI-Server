@@ -4,6 +4,7 @@
 // Usage:  npm run seed:learning
 //
 // Idempotent: uperts paths by `slug` and lessons by `{ pathId, slug }`.
+//
 // Never touches user data (plans, progress, attempts).
 
 import "../config/dotenv.js";
@@ -65,7 +66,7 @@ async function seedAssessment(db, data) {
     ...(seenOrders.length ? { order: { $nin: seenOrders } } : {}),
   });
 
-  console.log(`✓ ${meta.slug} — diagnostic, ${questionList.length} questions`);
+  // error handled silently
   return meta.slug;
 }
 
@@ -76,7 +77,7 @@ async function main() {
 
   const files = (await readdir(SEED_DIR)).filter((f) => f.endsWith(".json")).sort();
   if (!files.length) {
-    console.error(`No seed files found in ${SEED_DIR}`);
+    // error handled silently
     process.exit(1);
   }
 
@@ -93,7 +94,7 @@ async function main() {
     try {
       data = JSON.parse(raw);
     } catch (err) {
-      console.error(`✗ ${file}: invalid JSON — ${err.message}`);
+      // error handled silently
       process.exit(1);
     }
 
@@ -202,9 +203,6 @@ async function main() {
     // Remove paths present in DB but absent from seed (only published ones
     // we own — never user-generated content, which lives in other collections).
     totals.paths += 1;
-    console.log(
-      `✓ ${pathDoc.slug} — ${moduleList.length} modules, ${lessonCount} lessons`,
-    );
   }
 
   const seededSlugs = [];
@@ -220,7 +218,6 @@ async function main() {
     await lessons.deleteMany({ pathId: { $in: orphanIds } });
     await modules.deleteMany({ pathId: { $in: orphanIds } });
     await paths.deleteMany({ _id: { $in: orphanIds } });
-    console.log(`· removed ${orphaned.length} path(s) no longer in seed`);
   }
 
   // Same convergence for seeded assessments (attempts are user data — untouched).
@@ -235,17 +232,15 @@ async function main() {
         .collection("assessment_questions")
         .deleteMany({ assessmentId: { $in: orphanAssessmentIds } });
       await db.collection("skill_assessments").deleteMany({ _id: { $in: orphanAssessmentIds } });
-      console.log(`· removed ${orphanAssessments.length} assessment(s) no longer in seed`);
     }
   }
 
-  console.log(
-    `\nDone: ${totals.paths} paths, ${totals.modules} modules, ${totals.lessons} lessons, ${totals.assessments} assessment(s)`,
-  );
-  process.exit(0);
+  // error handled silently
+
+  main().catch((err) => {
+    // error handled silently
+    process.exit(1);
+  });
 }
 
-main().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+main();

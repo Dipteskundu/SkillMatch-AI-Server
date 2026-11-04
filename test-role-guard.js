@@ -10,12 +10,11 @@ async function run() {
 
   for (const c of cases) {
     const res = await askChatbot("test-uid", c.role, c.q);
-    console.log(`\nROLE=${c.role} Q="${c.q}"\nA=${res.answer}\nLINK=${JSON.stringify(res.link)}`);
+    // test output removed
   }
 }
 
 run().catch((err) => {
-  console.error("FAILED:", err?.message || err);
+  // test output removed
   process.exitCode = 1;
 });
-

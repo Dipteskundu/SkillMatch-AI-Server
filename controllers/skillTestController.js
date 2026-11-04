@@ -46,7 +46,7 @@ const generateTest = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error generating skill test:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: error.message || "Failed to generate test" });
   }
 };
@@ -147,7 +147,7 @@ const submitTest = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error submitting skill test:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: error.message || "Failed to submit test" });
   }
 };

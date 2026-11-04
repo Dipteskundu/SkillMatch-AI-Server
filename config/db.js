@@ -34,7 +34,6 @@ async function connectDB() {
       })
       .catch((error) => {
         globalCache.promise = null;
-        console.error("Error connecting to MongoDB:", error.message);
         throw error;
       });
   }

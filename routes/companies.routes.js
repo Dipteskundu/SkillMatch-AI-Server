@@ -27,7 +27,7 @@ async function getAllCompaniesHandler(req, res) {
     });
 
   } catch (error) {
-    console.error("GET Companies Error:", error);
+    // error handled silently
 
     res.status(500).json({
       success: false,
@@ -85,7 +85,7 @@ async function createCompanyHandler(req, res) {
     });
 
   } catch (error) {
-    console.error("POST Company Error:", error);
+    // error handled silently
 
     res.status(500).json({
       success: false,
@@ -135,7 +135,7 @@ router.post("/api/v1/companies/:id/follow", async (req, res) => {
       message: "Company followed successfully",
     });
   } catch (error) {
-    console.error("FOLLOW Company Error:", error);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: "Server error while following company",

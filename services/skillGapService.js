@@ -135,7 +135,7 @@ Example format:
         learningSuggestions = [];
       }
     } catch (error) {
-      console.error("Failed to generate learning suggestions from AI:", error);
+      // output removed
       // Fallback suggestions
       learningSuggestions = missingSkills.map(skill => `Consider reviewing documentation and building a small project using ${skill}.`);
     }

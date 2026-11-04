@@ -100,7 +100,7 @@ router.post("/api/tasks", async (req, res) => {
           }
         }
       } catch (err) {
-        console.error("Task Notification Error:", err);
+        // error handled silently
       }
     });
 
@@ -111,7 +111,7 @@ router.post("/api/tasks", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("POST Task Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error while assigning task" });
   }
 });
@@ -141,7 +141,7 @@ router.get("/api/tasks/candidate/:uid", async (req, res) => {
 
     res.status(200).json({ success: true, tasks, applications });
   } catch (error) {
-    console.error("GET Candidate Tasks Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error while fetching tasks" });
   }
 });
@@ -167,7 +167,7 @@ router.put("/api/tasks/:taskId/accept", async (req, res) => {
 
     res.status(200).json({ success: true, message: "Task accepted" });
   } catch (error) {
-    console.error("PUT Task Accept Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error while accepting task" });
   }
 });
@@ -244,11 +244,11 @@ router.post("/api/tasks/:taskId/submit", async (req, res) => {
 
         await db.collection("notifications").insertOne(notifObj);
       } catch (err) {
-        console.error("Task submission notify recruiter failed:", err);
+        // error handled silently
       }
     });
   } catch (error) {
-    console.error("POST Task Submit Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error while submitting task" });
   }
 });
@@ -292,7 +292,7 @@ router.get("/api/tasks/submissions/:recruiterId", async (req, res) => {
 
     res.status(200).json({ success: true, submissions });
   } catch (error) {
-    console.error("GET Submissions Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error while fetching submissions" });
   }
 });

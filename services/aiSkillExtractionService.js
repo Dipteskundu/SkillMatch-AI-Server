@@ -95,7 +95,7 @@ async function generateWithFallback(prompt, retryCount = 0) {
       const text = result.response.text();
       
       if (text && text.trim()) {
-        console.log(`✓ Successfully used model: ${modelName} for skill extraction`);
+        // output removed
         return { text: text.trim(), modelUsed: modelName };
       }
     } catch (err) {
@@ -173,7 +173,7 @@ ${resumeText.substring(0, 15000)} /* Truncate to avoid exceeding token limits if
       role_titles: Array.isArray(extractedData.role_titles) ? extractedData.role_titles : []
     };
   } catch (error) {
-    console.error("Failed to parse Skill Extraction JSON:", text);
+    // output removed
     const salvaged = salvageFromMalformedJson(text);
     const fallbackTech = extractTechFallback(resumeText);
     const mergedTech = uniqStrings([...(salvaged.technologies || []), ...fallbackTech]);

@@ -31,9 +31,10 @@ async function sendInterviewNotification({ db, userId, notification }) {
 
   try {
     await db.collection("notifications").insertOne(notification);
-  } catch (err) {
-    console.error("Failed to persist notification:", err);
-  }
+} catch (err) {
+        // error handled silently
+      }
+    }
 };
 
 export const scheduleInterview = async (req, res) => {
@@ -184,8 +185,8 @@ export const scheduleInterview = async (req, res) => {
           }
         );
       } catch (err) {
-        console.error("Failed to update application status to interviewing:", err);
-      }
+      // error handled silently
+    }
     }
 
     const candidateMessage = `Your interview for ${interview.jobTitle || "a job"} has been scheduled.`;
@@ -254,7 +255,7 @@ export const scheduleInterview = async (req, res) => {
       ]);
     });
   } catch (error) {
-    console.error("Interview Scheduling Error:", error.message);
+    // error handled silently
     res.status(500).json({
       success: false,
       message: "Server error while scheduling interview",
@@ -285,7 +286,7 @@ export const getRecruiterInterviews = async (req, res) => {
       count: interviews.length,
     });
   } catch (error) {
-    console.error("GET Recruiter Interviews Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error while fetching interviews" });
   }
 };
@@ -334,7 +335,7 @@ export const updateInterviewStatus = async (req, res) => {
           }
         );
       } catch (appErr) {
-        console.error("Failed to sync application status:", appErr);
+        // error handled silently
       }
     } else if (status === "cancelled" && interview.applicationId) {
       try {
@@ -346,7 +347,7 @@ export const updateInterviewStatus = async (req, res) => {
           }
         );
       } catch (appErr) {
-        console.error("Failed to revert application status:", appErr);
+        // error handled silently
       }
     }
 
@@ -369,7 +370,7 @@ export const updateInterviewStatus = async (req, res) => {
       });
     });
   } catch (error) {
-    console.error("UPDATE Interview Status Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error while updating interview status" });
   }
 };
@@ -397,7 +398,7 @@ export const getCandidateInterviews = async (req, res) => {
       count: interviews.length,
     });
   } catch (error) {
-    console.error("GET Candidate Interviews Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error while fetching candidate interviews" });
   }
 };
@@ -431,7 +432,7 @@ export const getInterviewById = async (req, res) => {
 
     res.status(200).json({ success: true, interview });
   } catch (err) {
-    console.error("GET Interview By ID Error:", err);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -584,7 +585,7 @@ export const updateInterview = async (req, res) => {
 
     res.status(200).json({ success: true, message: "Interview updated", data: result.value });
   } catch (err) {
-    console.error("UPDATE Interview Error:", err);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -621,8 +622,8 @@ export const cancelInterview = async (req, res) => {
           },
         );
       } catch (err) {
-        console.error("Failed to revert application status on cancel:", err);
-      }
+      // error handled silently
+    }
     }
 
     res.status(200).json({ success: true, message: "Interview cancelled" });
@@ -659,7 +660,7 @@ export const cancelInterview = async (req, res) => {
       ]);
     });
   } catch (err) {
-    console.error("CANCEL Interview Error:", err);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -694,7 +695,7 @@ export const completeInterview = async (req, res) => {
           },
         );
       } catch (err) {
-        console.error("Failed to sync application status on complete:", err);
+        // error handled silently
       }
     }
 
@@ -716,7 +717,7 @@ export const completeInterview = async (req, res) => {
       });
     });
   } catch (err) {
-    console.error("COMPLETE Interview Error:", err);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -743,7 +744,7 @@ export const startInterview = async (req, res) => {
 
     res.status(200).json({ success: true, message: "Interview started" });
   } catch (err) {
-    console.error("START Interview Error:", err);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 };

@@ -66,7 +66,7 @@ router.post("/api/jobs/:jobId/pre-apply-check", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Pre-Apply Check Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error during verification check" });
   }
 });
@@ -98,7 +98,7 @@ router.get("/api/verification/status/:uid", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Verification Status Error:", error);
+    // error handled silently
     res.status(500).json({ success: false, message: "Server error" });
   }
 });

@@ -62,6 +62,8 @@ export function loadEnv() {
       GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
       JWT_SECRET: process.env.JWT_SECRET || "",
       JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
+      FIREBASE_API_KEY: process.env.FIREBASE_API_KEY || "",
+      FIREBASE_WEB_CLIENT_ID: process.env.FIREBASE_WEB_CLIENT_ID || "",
     },
     errors,
     warnings,

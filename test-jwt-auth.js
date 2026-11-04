@@ -44,12 +44,12 @@ checks.push(
     await call("/api/admin/users", jwt.sign({ uid: "x", role: "admin" }, SECRET, { expiresIn: -10 })),
     401,
   ],
-);
+]);
 
 let failed = 0;
 for (const [name, actual, expected] of checks) {
   const ok = actual === expected;
   if (!ok) failed += 1;
-  console.log(`${ok ? "PASS" : "FAIL"}  ${name} (got ${actual}, want ${expected})`);
+  // test output removed
 }
 process.exitCode = failed ? 1 : 0;

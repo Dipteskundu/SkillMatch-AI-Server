@@ -202,7 +202,7 @@ export async function enrollInPath(req, res) {
       created: true,
     });
   } catch (error) {
-    console.error("POST /learning/enrollments failed:", error);
+    // error handled silently
     return fail(res, 500, "Failed to enroll in this path");
   }
 }
@@ -237,7 +237,7 @@ export async function generatePlan(req, res) {
       if (match) jsonStr = match[1].trim();
       raw = JSON.parse(jsonStr);
     } catch (err) {
-      console.error("Plan generation (AI) failed:", err?.message || err);
+      // error handled silently
       return fail(res, 502, "Plan generation failed. Please try again.");
     }
 
@@ -245,7 +245,7 @@ export async function generatePlan(req, res) {
     try {
       body = normalizePlan(raw, answers);
     } catch (err) {
-      console.error("Plan generation (schema) failed:", err?.message || err);
+      // error handled silently
       return fail(res, 502, "Plan generation failed. Please try again.");
     }
 
@@ -297,7 +297,7 @@ export async function generatePlan(req, res) {
 
     return res.status(201).json({ success: true, data: plan });
   } catch (error) {
-    console.error("POST /learning/plans/generate failed:", error);
+    // error handled silently
     return fail(res, 500, "Failed to generate a plan");
   }
 }
@@ -389,7 +389,7 @@ export async function listMyPlans(req, res) {
 
     res.status(200).json({ success: true, data, count: data.length, activity });
   } catch (error) {
-    console.error("GET /learning/my-plans failed:", error);
+    // error handled silently
     return fail(res, 500, "Failed to load your plans");
   }
 }
@@ -479,7 +479,7 @@ export async function updatePlan(req, res) {
       .findOne({ _id: plan._id });
     return res.status(200).json({ success: true, data: updated });
   } catch (error) {
-    console.error("PATCH /learning/plans/:id failed:", error);
+    // error handled silently
     return fail(res, 500, "Failed to update the plan");
   }
 }
@@ -552,7 +552,7 @@ export async function regeneratePlan(req, res) {
       if (match) jsonStr = match[1].trim();
       raw = JSON.parse(jsonStr);
     } catch (err) {
-      console.error("Plan regeneration (AI) failed:", err?.message || err);
+      // error handled silently
       return fail(res, 502, "Regeneration failed. Your existing plan is unchanged.");
     }
 
@@ -572,7 +572,7 @@ export async function regeneratePlan(req, res) {
     try {
       body = normalizePlan(raw, answers);
     } catch (err) {
-      console.error("Plan regeneration (schema) failed:", err?.message || err);
+      // error handled silently
       return fail(res, 502, "Regeneration failed. Your existing plan is unchanged.");
     }
 
@@ -594,7 +594,7 @@ export async function regeneratePlan(req, res) {
       .findOne({ _id: plan._id });
     return res.status(200).json({ success: true, data: updated });
   } catch (error) {
-    console.error("POST /learning/plans/:id/regenerate failed:", error);
+    // error handled silently
     return fail(res, 500, "Failed to regenerate the plan");
   }
 }
@@ -652,7 +652,7 @@ export async function getAdaptiveRecommendationsCtrl(req, res) {
       data: { recommendations, generatedAt: new Date().toISOString() },
     });
   } catch (error) {
-    console.error("GET /learning/recommendations failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to generate recommendations" });
   }
 }
@@ -681,7 +681,7 @@ export async function getCertificateCtrl(req, res) {
       data: { ...certificateInfo, pathId },
     });
   } catch (error) {
-    console.error("GET /learning/certificate failed:", error);
+    // error handled silently
     return res.status(500).json({ success: false, message: "Failed to generate certificate info" });
   }
 }

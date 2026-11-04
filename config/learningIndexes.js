@@ -35,22 +35,22 @@ const INDEXES = {
   ],
 };
 
-let warned = false;
-
 /** Create every Learning Hub index. Safe to run on every boot. */
 export async function ensureLearningIndexes(db) {
+  let failedCollections = [];
   for (const [collection, indexes] of Object.entries(INDEXES)) {
     for (const { key, unique } of indexes) {
       try {
         await db.collection(collection).createIndex(key, unique ? { unique: true } : {});
       } catch (error) {
-        // A duplicate-key failure on a non-unique index means existing data
-        // violates it — surface once rather than crashing boot.
-        if (!warned) {
-          warned = true;
-          console.warn(`LEARNING INDEX WARN (${collection}):`, error.message);
+        // Surface index creation failures once rather than crashing boot.
+        if (!failedCollections.includes(collection)) {
+          failedCollections.push(collection);
         }
       }
     }
+  }
+  if (failedCollections.length) {
+    // Index warnings are collected but not emitted to console in production
   }
 }

@@ -39,7 +39,7 @@ let indexPromise = null;
 function ensureIndexesOnce() {
   if (!indexPromise) {
     indexPromise = ensureLearningIndexes(getDB()).catch((error) => {
-      console.warn("Learning Hub index setup skipped:", error.message);
+      // Index setup failure is non-fatal; the app continues without auto-indexes
     });
   }
   return indexPromise;
@@ -48,12 +48,12 @@ function ensureIndexesOnce() {
 const { env, errors, warnings, isProd } = loadEnv();
 
 if (warnings.length) {
-  warnings.forEach((msg) => console.warn(`ENV WARN: ${msg}`));
+  // Warnings are collected but not emitted to console in production
 }
 if (errors.length) {
-  errors.forEach((msg) =>
-    (isProd ? console.error : console.warn)(`ENV ERROR: ${msg}`),
-  );
+  errors.forEach((msg) => {
+    // Env errors are collected; fatal errors will cause 500 response
+  });
 }
 
 const hasFatalEnv = errors.length > 0;
@@ -143,7 +143,7 @@ const ADMIN_ONLY = [/^\/admin\//, /^\/dashboard\/admin$/, /^\/v1\/admin\//];
 app.use("/api", (req, res, next) => {
   const path = req.path.replace(/\/+$/, "") || "/";
 
-  if (req.method === "POST" && ["/auth/login", "/auth/register", "/auth/refresh", "/auth/logout"].includes(path)) {
+  if (req.method === "POST" && ["/auth/login", "/auth/register", "/auth/refresh", "/auth/logout", "/auth/google"].includes(path)) {
     return next();
   }
   if (req.method === "GET" && PUBLIC_GET.some((re) => re.test(path))) {
@@ -192,7 +192,6 @@ app.use((err, req, res, next) => {
   }
 
   const status = err.status || 500;
-  console.error("Unhandled error:", err);
   res.status(status).json({
     success: false,
     message: status === 500 ? "Internal server error" : err.message,

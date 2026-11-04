@@ -62,10 +62,7 @@ async function extractTextFromResume(file) {
           throw new Error("pdf-parse export is unsupported in current runtime");
         }
       } catch (err) {
-        console.error(
-          "pdf-parse failed to load or run:",
-          err && err.message ? err.message : err,
-        );
+        // output removed
         throw new Error("PDF parsing is unavailable in this environment");
       }
     } else if (
@@ -78,10 +75,7 @@ async function extractTextFromResume(file) {
         const result = await mammoth.extractRawText({ buffer });
         extractedText = result.value;
       } catch (err) {
-        console.error(
-          "mammoth failed to load or run:",
-          err && err.message ? err.message : err,
-        );
+        // output removed
         throw new Error("DOCX parsing is unavailable in this environment");
       }
     } else if (mimeType === "text/plain") {
@@ -96,7 +90,7 @@ async function extractTextFromResume(file) {
 
     return extractedText;
   } catch (error) {
-    console.error("Error parsing resume:", error);
+    // output removed
     throw new Error(`Failed to parse resume file: ${error.message}`);
   }
 }
