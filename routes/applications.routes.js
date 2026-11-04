@@ -4,7 +4,6 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
-import { getFirebaseService } from "../services/firebaseService.js";
 
 const router = express.Router();
 
@@ -171,19 +170,6 @@ router.put("/api/applications/:id/status", async (req, res) => {
 
     // Save notification to database
     await db.collection("notifications").insertOne(notification);
-
-    // Send real-time notification via Firebase (best-effort)
-    const firebaseService = getFirebaseService();
-    if (firebaseService) {
-      try {
-        await firebaseService.sendNotification(
-          updatedApplication.firebaseUid,
-          notification,
-        );
-      } catch (firebaseError) {
-        console.error("Firebase notification error:", firebaseError);
-      }
-    }
 
     res.status(200).json({
       success: true,

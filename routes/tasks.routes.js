@@ -1,7 +1,6 @@
 import express from "express";
 import { ObjectId } from "mongodb";
 import { getDB } from "../config/db.js";
-import { getFirebaseService } from "../services/firebaseService.js";
 
 const router = express.Router();
 
@@ -82,32 +81,28 @@ router.post("/api/tasks", async (req, res) => {
       }
     );
 
-    // 3. Send notifications (Optional, do in background)
-    const firebaseService = getFirebaseService();
-    if (firebaseService) {
-      setImmediate(async () => {
-        try {
-          const apps = await db.collection("applications").find({ _id: { $in: objectIdApplicants } }).toArray();
-          for (const app of apps) {
-            if (app.firebaseUid) {
-              const notifObj = {
-                userId: app.firebaseUid,
-                type: "task_assigned",
-                taskId: taskResult.insertedId,
-                jobId: app.jobId,
-                message: `A technical task has been sent to you for the position of ${app.jobTitle || "the job"}.`,
-                read: false,
-                createdAt: new Date()
-              };
-              await db.collection("notifications").insertOne(notifObj);
-              await firebaseService.sendNotification(app.firebaseUid, notifObj);
-            }
+    // 3. Persist notifications (Optional, do in background)
+    setImmediate(async () => {
+      try {
+        const apps = await db.collection("applications").find({ _id: { $in: objectIdApplicants } }).toArray();
+        for (const app of apps) {
+          if (app.firebaseUid) {
+            const notifObj = {
+              userId: app.firebaseUid,
+              type: "task_assigned",
+              taskId: taskResult.insertedId,
+              jobId: app.jobId,
+              message: `A technical task has been sent to you for the position of ${app.jobTitle || "the job"}.`,
+              read: false,
+              createdAt: new Date()
+            };
+            await db.collection("notifications").insertOne(notifObj);
           }
-        } catch (err) {
-          console.error("Task Notification Error:", err);
         }
-      });
-    }
+      } catch (err) {
+        console.error("Task Notification Error:", err);
+      }
+    });
 
     res.status(201).json({
       success: true,
@@ -248,10 +243,6 @@ router.post("/api/tasks/:taskId/submit", async (req, res) => {
         };
 
         await db.collection("notifications").insertOne(notifObj);
-        const firebaseService = getFirebaseService();
-        if (firebaseService) {
-          await firebaseService.sendNotification(recruiterId, notifObj);
-        }
       } catch (err) {
         console.error("Task submission notify recruiter failed:", err);
       }

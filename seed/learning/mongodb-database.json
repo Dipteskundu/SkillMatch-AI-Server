@@ -1,0 +1,536 @@
+{
+  "slug": "mongodb-database",
+  "title": "MongoDB and Database Fundamentals",
+  "topic": "Databases",
+  "category": "Backend",
+  "level": "beginner",
+  "difficulty": "Beginner",
+  "description": "Learn how document databases work, perform CRUD operations with the MongoDB query language, speed queries up with indexes, and model data with embedding and aggregation pipelines.",
+  "objectives": [
+    "Explain how document databases differ from relational tables",
+    "Insert, read, update, and delete documents with the MongoDB shell and driver",
+    "Write queries with comparison, logical, and array operators",
+    "Create indexes and read explain plans to diagnose slow queries",
+    "Choose between embedding and referencing and run aggregation pipelines"
+  ],
+  "prerequisites": ["Basic JavaScript", "Command line basics", "Understanding of JSON"],
+  "estimatedDuration": "5 weeks",
+  "estimatedHours": 40,
+  "tags": ["mongodb", "database", "crud", "indexing"],
+  "order": 5,
+  "status": "published",
+  "modules": [
+    {
+      "slug": "document-database-concepts",
+      "title": "Document Database Concepts",
+      "description": "Collections, documents, BSON, and how MongoDB stores and identifies data.",
+      "order": 1,
+      "estimatedHours": 10,
+      "prerequisites": [],
+      "completionCriteria": "Insert and retrieve documents in a collection and explain how _id and BSON shape storage.",
+      "lessons": [
+        {
+          "slug": "documents-and-collections",
+          "title": "Documents and Collections",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Describe documents and collections", "Compare documents with relational rows"],
+          "topics": ["documents", "collections"],
+          "content": {
+            "introduction": "MongoDB stores data as documents — JSON-like objects grouped into collections instead of tables of fixed rows.",
+            "explanation": "A document is a set of key/value pairs, similar to a JSON object; a collection is a group of documents. Unlike a relational table, documents in the same collection do not need the same fields, and a field can hold arrays or nested objects. This flexibility lets you store data the way your application reads it, but it pushes the responsibility for consistency onto you: nothing stops one document from storing a phone as { phone: \"555-1234\" } while another stores { phone: { mobile: \"555-1234\" } }. Design documents around access patterns, and validate them in your application.",
+            "examples": [
+              {
+                "title": "Two documents in one collection",
+                "language": "javascript",
+                "code": "// db.jobs.insertMany([\n//   { title: \"Backend Engineer\", tags: [\"node\", \"api\"], location: { city: \"Berlin\" } },\n//   { title: \"Data Scientist\", skills: [\"python\", \"sql\"], remote: true }\n// ])\n\n// Query any document by title:\ndb.jobs.find({ title: \"Backend Engineer\" });\n// -> { _id: ObjectId(\"...\"), title: \"Backend Engineer\",\n//      tags: [\"node\", \"api\"], location: { city: \"Berlin\" } }",
+                "walkthrough": "The two documents share a collection but have different fields — both are valid, and a query matches on the fields that exist."
+              }
+            ],
+            "useCase": "Catalogs, user profiles, and job listings where records vary in shape and nest naturally.",
+            "knowledgeCheck": [
+              {
+                "question": "What is a document in MongoDB?",
+                "type": "mcq",
+                "options": ["A JSON-like object with key/value pairs", "A table row with fixed columns", "A PDF file", "An SQL JOIN"],
+                "correctIndex": 0,
+                "explanation": "Documents are BSON-encoded objects similar to JSON."
+              },
+              {
+                "question": "Must every document in a collection have the same fields?",
+                "type": "mcq",
+                "options": ["No, schemas are flexible", "Yes, always", "Only _id may differ", "Only in sharded clusters"],
+                "correctIndex": 0,
+                "explanation": "Flexibility is the point of a document store; your app enforces consistency."
+              }
+            ],
+            "summary": "Documents live in collections, need not share fields, and can nest objects and arrays."
+          }
+        },
+        {
+          "slug": "the-id-field-and-bson",
+          "title": "The _id Field and BSON",
+          "order": 2,
+          "durationMinutes": 25,
+          "isPreview": false,
+          "objectives": ["Explain how _id is generated", "Describe BSON and its type advantages"],
+          "topics": ["_id", "bson"],
+          "content": {
+            "introduction": "Every document must have a unique _id, and MongoDB stores documents in BSON, a binary encoding of JSON.",
+            "explanation": "If you do not supply _id, MongoDB generates an ObjectId: a 12-byte value combining a timestamp, machine/process identifiers, and a counter, making it unique without coordination between servers. The _id is the primary key — it is always indexed and should never change. BSON extends JSON with types JSON lacks: Date, ObjectId, Decimal128, binary data, and integers. That means a date stays a date and comparisons are done by the database rather than by string ordering, but it also means drivers return JavaScript objects with those types, so you convert explicitly when serializing to plain JSON.",
+            "examples": [
+              {
+                "title": "Supplying your own _id",
+                "language": "javascript",
+                "code": "db.users.insertOne({\n  _id: \"user:1042\",          // your own stable key\n  name: \"Ada Lovelace\",\n  createdAt: new Date(),\n  score: NumberDecimal(\"99.5\")\n});\n\ndb.users.find({ _id: \"user:1042\" });\n\n// Generated ObjectId example:\n// ObjectId(\"65f1c2e4b2a9f81c9d3e7a10\")\n// encodes the creation time down to the second",
+                "walkthrough": "You may pick a meaningful _id or let MongoDB generate an ObjectId; createdAt is stored as a real Date, not a string."
+              }
+            ],
+            "useCase": "Natural keys like slugs or external IDs, and time-ordered ObjectIds that sort by creation time.",
+            "knowledgeCheck": [
+              {
+                "question": "What happens if you omit _id when inserting?",
+                "type": "mcq",
+                "options": ["MongoDB generates a unique ObjectId", "The insert fails", "The document gets _id: null", "MongoDB uses the title as the id"],
+                "correctIndex": 0,
+                "explanation": "The server creates a unique ObjectId automatically."
+              },
+              {
+                "question": "Which type does BSON add that plain JSON lacks?",
+                "type": "mcq",
+                "options": ["Date and ObjectId", "String", "Boolean", "Nested object"],
+                "correctIndex": 0,
+                "explanation": "BSON adds binary-safe types such as Date, ObjectId, and Decimal128."
+              }
+            ],
+            "summary": "_id is the always-present unique key; BSON gives MongoDB rich types JSON does not have."
+          }
+        },
+        {
+          "slug": "connecting-and-reading-data",
+          "title": "Connecting and Reading Data",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Connect to a database with the Node.js driver", "Run find and findOne and shape results"],
+          "topics": ["driver", "find"],
+          "content": {
+            "introduction": "The MongoDB shell and the Node driver expose the same query language — you connect, pick a collection, and call find.",
+            "explanation": "A connection string like mongodb://localhost:27017/jobmatch names the host, port, and default database. From the driver you get a client, select a database with client.db(), and a collection with db.collection(\"jobs\"). findOne returns a single matching document (or null), while find returns a cursor — results stream in batches, so you iterate with for await or convert them with toArray(). You can project fields with a second argument to fetch only what you need, which reduces both network traffic and memory.",
+            "examples": [
+              {
+                "title": "Connecting with the Node driver",
+                "language": "javascript",
+                "code": "const { MongoClient } = require(\"mongodb\");\n\nconst client = await MongoClient.connect(\"mongodb://localhost:27017\");\nconst jobs = client.db(\"jobmatch\").collection(\"jobs\");\n\nconst one = await jobs.findOne({ status: \"open\" });\n\nconst list = await jobs\n  .find({ status: \"open\" }, { projection: { title: 1, salaryMin: 1 } })\n  .sort({ createdAt: -1 })\n  .limit(10)\n  .toArray();\n\nconsole.log(list);\nawait client.close();",
+                "walkthrough": "findOne returns one document; the cursor chain sorts and limits before toArray materializes at most 10 projected documents."
+              }
+            ],
+            "useCase": "Fetching a single record by id or a short sorted list for a page view.",
+            "knowledgeCheck": [
+              {
+                "question": "What does findOne return when nothing matches?",
+                "type": "mcq",
+                "options": ["null", "An empty array", "An error", "undefined only"],
+                "correctIndex": 0,
+                "explanation": "findOne returns null so callers can branch on a missing record."
+              },
+              {
+                "question": "What is a cursor?",
+                "type": "mcq",
+                "options": ["A lazy handle to results you iterate or convert with toArray()", "A database index", "A write lock", "A connection string"],
+                "correctIndex": 0,
+                "explanation": "Cursors fetch results in batches instead of all at once."
+              }
+            ],
+            "summary": "Connect via a connection string, use findOne for one document and find with projection for lists."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "crud-operations-and-queries",
+      "title": "CRUD Operations & Queries",
+      "description": "Insert, update, and delete documents, and query with comparison, logical, and array operators.",
+      "order": 2,
+      "estimatedHours": 10,
+      "prerequisites": ["document-database-concepts"],
+      "completionCriteria": "Write a set of inserts, filtered updates, and deletes that modify exactly the intended documents.",
+      "lessons": [
+        {
+          "slug": "inserting-documents",
+          "title": "Inserting Documents",
+          "order": 1,
+          "durationMinutes": 25,
+          "isPreview": true,
+          "objectives": ["Insert one or many documents", "Understand insert behavior and duplicate keys"],
+          "topics": ["insert", "create"],
+          "content": {
+            "introduction": "Creating data starts with insertOne and insertMany, which add documents to a collection and create it if it does not exist.",
+            "explanation": "insertOne adds a single document; insertMany adds an array and returns the ids it generated. If you provide _id and a document with that id already exists, the insert fails with a duplicate key error (E11000) — which is exactly how a unique index enforces rules like one account per email. MongoDB does not create the collection until the first insert, so a typo in a collection name shows up as an empty result rather than an error. Inserts are atomic per document, so one bad document in insertMany does not corrupt the others.",
+            "examples": [
+              {
+                "title": "Inserting a job posting",
+                "language": "javascript",
+                "code": "const { insertedId } = await jobs.insertOne({\n  title: \"Frontend Developer\",\n  status: \"open\",\n  tags: [\"react\", \"css\"],\n  salaryMin: 70000,\n  createdAt: new Date()\n});\n\nawait jobs.insertMany([\n  { title: \"QA Engineer\", status: \"open\", tags: [\"testing\"] },\n  { title: \"Designer\", status: \"draft\", tags: [\"ui\"] }\n]);\n\nconsole.log(insertedId); // ObjectId of the first document",
+                "walkthrough": "insertOne returns the generated _id; insertMany adds several documents and is useful for seeding."
+              }
+            ],
+            "useCase": "Creating user accounts, job postings, and imported records.",
+            "knowledgeCheck": [
+              {
+                "question": "When is a collection actually created?",
+                "type": "mcq",
+                "options": ["On the first insert", "When the server starts", "When you run createCollection always", "Never"],
+                "correctIndex": 0,
+                "explanation": "MongoDB creates collections lazily on first write."
+              },
+              {
+                "question": "What happens when you insert a document whose _id already exists?",
+                "type": "mcq",
+                "options": ["A duplicate key error (E11000)", "The old document is overwritten", "A new _id is assigned", "The insert silently succeeds"],
+                "correctIndex": 0,
+                "explanation": "_id is unique, so the server rejects the duplicate."
+              }
+            ],
+            "summary": "insertOne and insertMany create documents; _id uniqueness turns duplicates into explicit errors."
+          }
+        },
+        {
+          "slug": "update-operators",
+          "title": "Update Operators",
+          "order": 2,
+          "durationMinutes": 35,
+          "isPreview": false,
+          "objectives": ["Update fields with operators instead of full replacements", "Use $set, $inc, $push, and upserts"],
+          "topics": ["update", "operators"],
+          "content": {
+            "introduction": "MongoDB updates change specific fields with operators, so you never have to rewrite an entire document.",
+            "explanation": "updateOne(filter, update) targets the first match; updateMany targets all of them. Passing a plain object as update replaces the whole document (dropping unspecified fields), so instead use operators: $set writes fields, $unset removes them, $inc increments a counter, and $push appends to an array. updateOne supports upsert: true, which inserts a new document built from the filter and update when nothing matches — perfect for counters or last-seen timestamps. Always pass both filter and update deliberately: an empty filter with updateMany will rewrite the whole collection.",
+            "examples": [
+              {
+                "title": "Safe partial updates with upsert",
+                "language": "javascript",
+                "code": "await jobs.updateOne(\n  { _id: jobId },\n  { $set: { status: \"closed\" }, $inc: { version: 1 } }\n);\n\nawait jobs.updateMany(\n  { status: \"open\", \"location.city\": \"Berlin\" },\n  { $push: { tags: \"relocated\" } }\n);\n\n// Create-or-update a page view counter:\nawait pages.updateOne(\n  { slug: \"pricing\" },\n  { $inc: { views: 1 }, $setOnInsert: { createdAt: new Date() } },\n  { upsert: true }\n);",
+                "walkthrough": "$set changes only listed fields, $inc bumps a counter, and the upsert creates the pricing document on first view."
+              }
+            ],
+            "useCase": "Status transitions, view counters, adding tags, and any partial edit to a stored record.",
+            "knowledgeCheck": [
+              {
+                "question": "Why should an update document contain operators like $set?",
+                "type": "mcq",
+                "options": ["A plain object would replace the entire document and drop other fields", "Operators are faster to type", "Operators skip validation", "Filters require them"],
+                "correctIndex": 0,
+                "explanation": "Replacement updates overwrite the document minus _id."
+              },
+              {
+                "question": "What does upsert: true do when no document matches?",
+                "type": "mcq",
+                "options": ["Inserts a new document from the filter and update", "Throws an error", "Deletes the filter", "Returns nothing and does nothing"],
+                "correctIndex": 0,
+                "explanation": "Upsert implements create-or-update in one call."
+              }
+            ],
+            "summary": "Use update operators for partial changes and upsert to combine create and update."
+          }
+        },
+        {
+          "slug": "query-operators-and-deletes",
+          "title": "Query Operators and Deletes",
+          "order": 3,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Filter with comparison and logical operators", "Delete precisely and safely"],
+          "topics": ["query-operators", "delete"],
+          "content": {
+            "introduction": "Queries combine operators to express conditions, and deletes use the same filters so you remove exactly what you mean.",
+            "explanation": "Comparison operators include $gt, $gte, $lt, $lte, $ne, $in, and $exists. Logical operators combine them: $and, $or, and $nor; a plain object with multiple keys acts as an implicit $and. Equality on an array field matches either the whole array or any element containing that value. Deletes work the same way: deleteOne removes the first match and deleteMany removes all matches — and because a deleteMany with an empty filter removes every document, many drivers reject that pattern. When unsure what will match, run the same filter with find first.",
+            "examples": [
+              {
+                "title": "Filtered query and safe delete",
+                "language": "javascript",
+                "code": "const openHighPaying = await jobs.find({\n  $and: [\n    { status: \"open\" },\n    { salaryMin: { $gte: 80000 } },\n    { tags: { $in: [\"node\", \"mongodb\"] } },\n    { deletedAt: { $exists: false } }\n  ]\n}).toArray();\n\n// Preview before deleting:\nconst doomed = await jobs.countDocuments({ status: \"expired\" });\n\nconst { deletedCount } = await jobs.deleteMany({ status: \"expired\" });\nconsole.log(deletedCount, \"of\", doomed);",
+                "walkthrough": "The query mixes $gte, $in, and $exists; counting first confirms the deleteMany filter before any data is removed."
+              }
+            ],
+            "useCase": "Finding eligible records by mixed criteria and cleaning up expired or soft-deleted rows.",
+            "knowledgeCheck": [
+              {
+                "question": "Which operator matches a field against a list of allowed values?",
+                "type": "mcq",
+                "options": ["$in", "$exists", "$set", "$push"],
+                "correctIndex": 0,
+                "explanation": "$in matches any value in the provided array."
+              },
+              {
+                "question": "How do you remove every document from a collection efficiently?",
+                "type": "mcq",
+                "options": ["Use deleteMany({}) or drop the collection", "Loop deleteOne forever", "Drop the database", "Rename the collection"],
+                "correctIndex": 0,
+                "explanation": "deleteMany with an empty filter (or collection.drop()) clears it in one operation."
+              }
+            ],
+            "summary": "Comparison and logical operators build precise filters; reuse those filters to preview deletes."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "indexes-and-query-performance",
+      "title": "Indexes & Query Performance",
+      "description": "Speed up reads with the right indexes and verify behavior with explain plans.",
+      "order": 3,
+      "estimatedHours": 10,
+      "prerequisites": ["crud-operations-and-queries"],
+      "completionCriteria": "Add an index for a slow query and prove the improvement with an explain() plan.",
+      "lessons": [
+        {
+          "slug": "why-indexes-matter",
+          "title": "Why Indexes Matter",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Explain how an index speeds up reads", "Recognize the write cost of indexing"],
+          "topics": ["indexes", "performance"],
+          "content": {
+            "introduction": "Without an index, MongoDB scans every document in a collection — an index keeps a sorted structure that points to matching documents.",
+            "explanation": "An index is a separate B-tree-like structure holding the indexed field values and document locations. Finding a value becomes a tree traversal instead of a full collection scan, turning millions of comparisons into a few. The trade-off is writes: every insert, update, or delete must also update each index on that collection, so every index slows writes a little and costs disk space. The default _id index always exists. A good rule is to index the fields that appear in your query filters and sorts, and to remove indexes that no query uses.",
+            "examples": [
+              {
+                "title": "Creating and using an index",
+                "language": "javascript",
+                "code": "// Before: collection scan\n// db.jobs.find({ status: \"open\", \"location.city\": \"Berlin\" })\n\n// Create the index once:\ndb.jobs.createIndex({ status: 1, \"location.city\": 1 });\n\n// Now the query can use it:\ndb.jobs.find({ status: \"open\", \"location.city\": \"Berlin\" });\n\n// List the indexes on the collection:\ndb.jobs.getIndexes();\n// -> [ { _id: 1 }, { status: 1, \"location.city\": 1 } ]",
+                "walkthrough": "The index covers the exact fields in the filter, so MongoDB seeks the tree instead of scanning every job."
+              }
+            ],
+            "useCase": "Any lookup by a repeated filter value: status, email, slug, or a nested location field.",
+            "knowledgeCheck": [
+              {
+                "question": "What is the main cost of adding an index?",
+                "type": "mcq",
+                "options": ["Slower writes and extra disk usage", "Slower queries", "Loss of data", "It disables replication"],
+                "correctIndex": 0,
+                "explanation": "Each write must update every index on the collection."
+              },
+              {
+                "question": "Which index already exists on every collection?",
+                "type": "mcq",
+                "options": ["The _id index", "A timestamp index", "A text index", "None"],
+                "correctIndex": 0,
+                "explanation": "_id is guaranteed unique and indexed."
+              }
+            ],
+            "summary": "Indexes replace collection scans with tree lookups at the cost of slower writes."
+          }
+        },
+        {
+          "slug": "compound-indexes-and-prefixes",
+          "title": "Compound Indexes and Prefixes",
+          "order": 2,
+          "durationMinutes": 30,
+          "isPreview": false,
+          "objectives": ["Build compound indexes in field order", "Apply the ESR rule for ordering"],
+          "topics": ["compound-indexes", "esr-rule"],
+          "content": {
+            "introduction": "A compound index covers several fields at once, and the order of those fields decides which queries it can serve.",
+            "explanation": "A compound index on { status: 1, createdAt: -1 } can serve queries that filter on status alone, or on status plus createdAt, because MongoDB can use the index prefix. It cannot efficiently serve a query filtering only on createdAt, because that field is not a prefix. The ESR rule gives the ordering: Equality fields first, Sort fields next, Range fields last. So for status = \"open\" sorted by createdAt with a salary range, index { status, createdAt, salaryMin } — equality narrows the tree, sort is already ordered, and the range applies to the remaining level.",
+            "examples": [
+              {
+                "title": "ESR ordering in practice",
+                "language": "javascript",
+                "code": "// Query: status = \"open\", sort by createdAt desc, salaryMin > 60000\ndb.jobs.createIndex({ status: 1, createdAt: -1, salaryMin: 1 });\n\n// Prefixes this index can serve:\n//   { status: \"open\" }                         yes\n//   { status: \"open\" } sort createdAt -1       yes\n//   { createdAt: -1 } only                     no (not a prefix)\n\nconst result = db.jobs.find({ status: \"open\", salaryMin: { $gt: 60000 } })\n  .sort({ createdAt: -1 })\n  .limit(20)\n  .explain(\"executionStats\");",
+                "walkthrough": "Equality on status pins the prefix, the sort follows the stored order, and the range filter applies last."
+              }
+            ],
+            "useCase": "List pages that filter by a fixed value, sort by recency, and cap the result count.",
+            "knowledgeCheck": [
+              {
+                "question": "What does 'index prefix' mean?",
+                "type": "mcq",
+                "options": ["Leading fields of a compound index, usable left to right", "The first document in a collection", "An index on _id", "A partial index"],
+                "correctIndex": 0,
+                "explanation": "A query can use { a, b } for filters on a alone, but not on b alone."
+              },
+              {
+                "question": "According to ESR, where do range conditions go?",
+                "type": "mcq",
+                "options": ["Last", "First", "In the middle with sorts", "They cannot be indexed"],
+                "correctIndex": 0,
+                "explanation": "Equality, then Sort, then Range keeps the tree narrowed before scanning."
+              }
+            ],
+            "summary": "Order compound indexes E-S-R and design them to match your query prefixes."
+          }
+        },
+        {
+          "slug": "explain-plans",
+          "title": "Reading Explain Plans",
+          "order": 3,
+          "durationMinutes": 25,
+          "isPreview": false,
+          "objectives": ["Run explain(\"executionStats\")", "Distinguish COLLSCAN from IXSCAN and spot in-memory sorts"],
+          "topics": ["explain", "profiling"],
+          "content": {
+            "introduction": "explain() shows exactly how MongoDB executed a query — the difference between guessing and knowing why a query is slow.",
+            "explanation": "Run a query with .explain(\"executionStats\") and look at stage names: COLLSCAN means every document was examined, IXSCAN means an index was used, and SORT stage indicates an in-memory sort, which fails if it exceeds the 32 MB limit. The winningPlan shows the chosen index, while executionStats reports keysExamined versus docsExamined — ideally similar numbers, because a large gap means the index matched far more keys than the query needed. totalDocsExamined near the collection size means you need a better index.",
+            "examples": [
+              {
+                "title": "Checking a query plan",
+                "language": "javascript",
+                "code": "db.jobs.find({ status: \"open\" }).sort({ createdAt: -1 })\n  .explain(\"executionStats\");\n\n// Look for:\n// \"stage\": \"IXSCAN\"            -> index used\n// \"stage\": \"COLLSCAN\"          -> full scan, add an index\n// \"stage\": \"SORT\" (blocking)   -> in-memory sort\n// executionStats.executionStages:\n//   nReturned, totalKeysExamined, totalDocsExamined\n\n// Verify which index was selected:\ndb.jobs.find({ status: \"open\" }).hint({ status: 1, createdAt: -1 }).explain();",
+                "walkthrough": "IXSCAN with keysExamined close to docsExamined is healthy; COLLSCAN or a huge gap tells you what to index next."
+              }
+            ],
+            "useCase": "Diagnosing a slow jobs listing and confirming that a new index is actually used.",
+            "knowledgeCheck": [
+              {
+                "question": "Which stage indicates a full collection scan?",
+                "type": "mcq",
+                "options": ["COLLSCAN", "IXSCAN", "PROJECTION", "FETCH only"],
+                "correctIndex": 0,
+                "explanation": "COLLSCAN reads every document — the classic sign a missing index is needed."
+              },
+              {
+                "question": "What does a blocking SORT stage suggest?",
+                "type": "mcq",
+                "options": ["The sort happens in memory, often because no index provides the order", "The query is cached", "The collection is sharded", "An index is redundant"],
+                "correctIndex": 0,
+                "explanation": "An index whose order matches the query lets MongoDB skip in-memory sorting."
+              }
+            ],
+            "summary": "explain() replaces guesswork: aim for IXSCAN, matched keys and docs, and no blocking SORT."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "data-modeling-and-aggregation",
+      "title": "Data Modeling & Aggregation",
+      "description": "Decide between embedding and referencing, then transform data with aggregation pipelines.",
+      "order": 4,
+      "estimatedHours": 10,
+      "prerequisites": ["indexes-and-query-performance"],
+      "completionCriteria": "Model a many-to-many relationship with an appropriate strategy and produce a grouped report with an aggregation pipeline.",
+      "lessons": [
+        {
+          "slug": "embedding-vs-referencing",
+          "title": "Embedding vs. Referencing",
+          "order": 1,
+          "durationMinutes": 30,
+          "isPreview": true,
+          "objectives": ["Choose embedding for data read together", "Know when references are required"],
+          "topics": ["modeling", "denormalization"],
+          "content": {
+            "introduction": "Document databases let you nest related data inside one document — the central modeling decision is when to embed and when to reference.",
+            "explanation": "Embed when the data is read together, changes together, and is bounded in size: a job with its tags or an address inside a user profile. One read returns everything, with no join. Reference when data is unbounded (a user's comment history), shared by many parents (a single company referenced by thousands of jobs), or updated independently at high frequency — duplicating it means updating every copy. MongoDB's 16 MB document limit and the guidance to keep embedded arrays to a few hundred items are practical ceilings. Unlike relational modeling, you are encouraged to duplicate data you read often and update rarely.",
+            "examples": [
+              {
+                "title": "Same relationship, two shapes",
+                "language": "javascript",
+                "code": "// Embedded: job owns its skills, read and written together\n{ _id: ObjectId(\"...\"), title: \"Backend Engineer\",\n  skills: [\"node\", \"mongodb\"],\n  location: { city: \"Berlin\", country: \"DE\" } }\n\n// Referenced: company is shared by many jobs\n// job: { title: \"QA Engineer\", companyId: ObjectId(\"...\") }\n// -> one company document updated once, referenced everywhere\n\nconst job = await jobs.findOne({ _id: jobId });\nconst company = await companies.findOne({ _id: job.companyId });",
+                "walkthrough": "The embedded job needs one query; the referenced shape avoids repeating the company document in every job."
+              }
+            ],
+            "useCase": "Choosing a shape for users, jobs, orders, and any parent/child or many-to-many relationship.",
+            "knowledgeCheck": [
+              {
+                "question": "When is embedding the better choice?",
+                "type": "mcq",
+                "options": ["When the data is read together and the size is bounded", "When the array grows without limit", "When many documents share the same object that changes often", "Never"],
+                "correctIndex": 0,
+                "explanation": "Co-accessed, bounded data is cheapest to store together."
+              },
+              {
+                "question": "When should you reference instead?",
+                "type": "mcq",
+                "options": ["When data is unbounded or shared and updated independently", "When data is small", "When it is read in one query", "When _id is a string"],
+                "correctIndex": 0,
+                "explanation": "Referencing avoids duplicating large or frequently changed data."
+              }
+            ],
+            "summary": "Embed bounded data you read together; reference unbounded or shared data to avoid duplication."
+          }
+        },
+        {
+          "slug": "aggregation-pipeline-basics",
+          "title": "Aggregation Pipeline Basics",
+          "order": 2,
+          "durationMinutes": 35,
+          "isPreview": false,
+          "objectives": ["Chain stages to transform documents", "Filter and reshape with $match, $project, and $sort"],
+          "topics": ["aggregation", "pipeline"],
+          "content": {
+            "introduction": "An aggregation pipeline processes documents stage by stage, passing the output of each stage into the next — like a conveyor belt of transformations.",
+            "explanation": "Each stage is an object with one operator: $match filters early (put it first so less data flows downstream), $project selects or computes fields, $sort orders, $limit caps the result, and $unwind expands an array into separate documents. Order matters: $match before $sort is far cheaper because MongoDB can use an index, whereas sorting first processes everything. Pipelines run on the server, so you transfer only the final result instead of pulling raw documents into your application to transform them.",
+            "examples": [
+              {
+                "title": "A pipeline that filters, unwinds, and reshapes",
+                "language": "javascript",
+                "code": "const byTag = await jobs.aggregate([\n  { $match: { status: \"open\" } },\n  { $unwind: \"$tags\" },\n  { $sort: { createdAt: -1 } },\n  { $limit: 20 },\n  { $project: { title: 1, tags: 1, salaryMin: 1 } }\n]).toArray();\n\n// One document with 3 tags becomes three documents,\n// each carrying one tag, limited to 20 rows total.",
+                "walkthrough": "$match narrows first, $unwind flattens tags, and $project removes fields the client does not need."
+              }
+            ],
+            "useCase": "Building tag pages, recent-item feeds, and reports directly inside the database.",
+            "knowledgeCheck": [
+              {
+                "question": "Why put $match at the beginning of a pipeline?",
+                "type": "mcq",
+                "options": ["It reduces the number of documents later stages process", "It creates an index", "It is required by the syntax", "It caches results"],
+                "correctIndex": 0,
+                "explanation": "Filtering early saves CPU and memory in every subsequent stage."
+              },
+              {
+                "question": "What does $unwind do?",
+                "type": "mcq",
+                "options": ["Splits an array field into one document per element", "Flattens nested objects", "Removes null values", "Merges two collections"],
+                "correctIndex": 0,
+                "explanation": "Each element becomes its own document, repeating the other fields."
+              }
+            ],
+            "summary": "Pipelines transform documents stage by stage — filter early, unwind arrays, project only what you need."
+          }
+        },
+        {
+          "slug": "grouping-and-lookups",
+          "title": "Grouping and Lookups",
+          "order": 3,
+          "durationMinutes": 35,
+          "isPreview": false,
+          "objectives": ["Summarize data with $group and accumulator operators", "Join collections with $lookup"],
+          "topics": ["$group", "$lookup"],
+          "content": {
+            "introduction": "$group collapses documents into summary rows keyed by an expression, and $lookup brings in fields from another collection.",
+            "explanation": "$group requires _id as the grouping key — use a field, an expression like $toLower, or null to aggregate everything. Accumulators build the result: $sum and $avg compute totals and averages, $count counts, $max/$min find extremes, and $push/$addToSet collect values into arrays. $lookup performs a left join: specify the foreign collection, the local field, and the foreign field, and the matched documents arrive in an array field. Use $lookup sparingly — it is convenient, but a query plus application-level joins or an embedded reference can be cheaper at scale.",
+            "examples": [
+              {
+                "title": "Jobs per city plus company name",
+                "language": "javascript",
+                "code": "const report = await jobs.aggregate([\n  { $match: { status: \"open\" } },\n  { $group: {\n      _id: \"$location.city\",\n      total: { $sum: 1 },\n      avgSalary: { $avg: \"$salaryMin\" }\n  } },\n  { $sort: { total: -1 } },\n  { $lookup: {\n      from: \"companies\",\n      localField: \"_id\",\n      foreignField: \"city\",\n      as: \"companies\"\n  } }\n]).toArray();\n\n// -> [ { _id: \"Berlin\", total: 42, avgSalary: 82000, companies: [...] } ]",
+                "walkthrough": "$group counts open jobs per city and averages salary, $sort ranks the cities, and $lookup appends matching companies."
+              }
+            ],
+            "useCase": "Analytics dashboards: counts per category, average values, top-N lists, and enriched reports.",
+            "knowledgeCheck": [
+              {
+                "question": "What must a $stage of $group define?",
+                "type": "mcq",
+                "options": ["_id — the grouping key", "A sort order", "An index name", "A limit"],
+                "correctIndex": 0,
+                "explanation": "Documents are collapsed by the expression assigned to _id."
+              },
+              {
+                "question": "Which operator performs a join between collections?",
+                "type": "mcq",
+                "options": ["$lookup", "$match", "$unwind", "$set"],
+                "correctIndex": 0,
+                "explanation": "$lookup adds an array of matched foreign documents to each input."
+              }
+            ],
+            "summary": "$group summarizes with accumulators; $lookup joins another collection. Keep joins deliberate."
+          }
+        }
+      ]
+    }
+  ]
+}

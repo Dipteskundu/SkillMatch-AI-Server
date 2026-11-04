@@ -13,17 +13,14 @@ if (!apiKey) {
 // Initialize the Google Generative AI client
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
-// Model priority list - using available model names from the API
-// Based on the models available for this API key
+// Model priority list. Every entry verified against generateContent for
+// this key: the previous 2.x list was retired server-side and 404'd on
+// every call, which silently broke all AI features in this service.
 const MODEL_PRIORITY = [
-  "gemini-2.5-flash",          // Latest stable Flash model (recommended)
-  "gemini-flash-latest",       // Alias for latest Flash
-  "gemini-2.0-flash",          // Gemini 2.0 Flash
-  "gemini-2.0-flash-001",      // Stable Gemini 2.0 Flash
-  "gemini-2.5-pro",            // Latest stable Pro model
-  "gemini-pro-latest",         // Alias for latest Pro
-  "gemini-2.0-flash-lite",     // Lighter version
-  "gemini-2.0-flash-lite-001"  // Stable lite version
+  "gemini-3.6-flash",           // Current stable Flash
+  "gemini-3.5-flash",           // Previous stable Flash
+  "gemini-3.5-flash-lite",      // Lighter/cheaper fallback
+  "gemini-3.1-flash-lite",      // Oldest still-live lite
 ];
 
 const TIME_LIMIT_MINUTES = 10;
@@ -250,6 +247,7 @@ Return ONLY the single JSON object, no markdown, no extra text, no arrays.`;
 }
 
 export {
+  generateWithFallback,
   generateQuestions,
   evaluateAnswers,
   TIME_LIMIT_MINUTES,

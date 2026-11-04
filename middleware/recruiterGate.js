@@ -23,3 +23,16 @@ export function requireCandidate(req, res, next) {
 
   return next();
 }
+
+export function requireAdmin(req, res, next) {
+  const role = req.user?.role;
+  if (!role) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+
+  if (role !== "admin") {
+    return res.status(403).json({ success: false, message: "Admin access required" });
+  }
+
+  return next();
+}
