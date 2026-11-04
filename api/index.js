@@ -1,5 +1,4 @@
 import "../config/dotenv.js";
-import { timingSafeEqual } from "node:crypto";
 import express from "express";
 import cors from "cors";
 
@@ -64,43 +63,10 @@ app.use(
   cors({
     origin: "*",
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: false,
   }),
 );
-
-app.use("/api", (req, res, next) => {
-  if (req.method === "OPTIONS") return next();
-
-  if (!env.API_KEY) {
-    return res.status(503).json({
-      success: false,
-      message: "API access is not configured on this server.",
-    });
-  }
-
-  const providedKey = req.get("X-API-Key");
-  if (typeof providedKey !== "string") {
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorized: Missing API key",
-    });
-  }
-
-  const expected = Buffer.from(env.API_KEY);
-  const provided = Buffer.from(providedKey);
-  if (
-    expected.length !== provided.length ||
-    !timingSafeEqual(expected, provided)
-  ) {
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorized: Invalid API key",
-    });
-  }
-
-  return next();
-});
 
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));

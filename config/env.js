@@ -57,7 +57,6 @@ export function loadEnv() {
         process.env.obMONGO_DB_NAME || 
         "skillmatchai",
       NODE_ENV: process.env.NODE_ENV || "development",
-      API_KEY: process.env.API_KEY?.trim() || "",
       PORT: process.env.PORT || "5000",
       GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
       JWT_SECRET: process.env.JWT_SECRET || "",
