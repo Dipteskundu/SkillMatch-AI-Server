@@ -129,6 +129,9 @@ app.use("/api", (req, res, next) => {
   if (req.method === "POST" && ["/auth/login", "/auth/register", "/auth/refresh", "/auth/logout", "/auth/google"].includes(path)) {
     return next();
   }
+  if (req.method === "POST" && path === "/chatbot/ask-public") {
+    return next();
+  }
   if (req.method === "GET" && PUBLIC_GET.some((re) => re.test(path))) {
     return next();
   }
