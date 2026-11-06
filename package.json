@@ -7,7 +7,8 @@
   "scripts": {
     "build": "node --check api/index.js && node --input-type=module -e \"await import('./api/index.js')\"",
     "start": "node index.js",
-    "seed:learning": "node scripts/seed-learning.js"
+    "seed:learning": "node scripts/seed-learning.js",
+    "test": "node --test tests/chatbotAccess.test.js"
   },
   "engines": {
     "node": "26.x"
